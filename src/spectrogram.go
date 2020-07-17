@@ -8,6 +8,7 @@ import (
 	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
 	"image/color"
+	"math"
 	"os"
 )
 
@@ -24,6 +25,30 @@ func New500Filter() *Filter {
 	filter.acoeff = []float64{0.9928926106217069, -1.9878505507862085, 1}
 	filter.bcoeff = []float64{-1, 0, 1}
 	filter.gain = 188.89635546457632
+	filter.xv = []float64{0, 0, 0}
+	filter.yv = []float64{0, 0, 0}
+
+	return &filter
+}
+
+func New475Filter() *Filter {
+	var filter Filter
+
+	filter.acoeff = []float64{0.9964432034289522, -1.991876206821747, 1}
+	filter.bcoeff = []float64{-1, 0, 1}
+	filter.gain = 552.697109388129
+	filter.xv = []float64{0, 0, 0}
+	filter.yv = []float64{0, 0, 0}
+
+	return &filter
+}
+
+func New625Filter() *Filter {
+	var filter Filter
+
+	filter.acoeff = []float64{0.9964437229692925, -1.988536763808585, 1}
+	filter.bcoeff = []float64{-1, 0, 1}
+	filter.gain = 520.6715676408551
 	filter.xv = []float64{0, 0, 0}
 	filter.yv = []float64{0, 0, 0}
 
@@ -90,17 +115,19 @@ func plotGraph(dataX,
 	}
 
 	lines2, _, _ := plotter.NewLinePoints(xys2)
-	lines2.Color = color.RGBA{B:255, A:255}
+	lines2.Color = color.RGBA{B: 255, A: 255}
+
+	lines3, _, _ := plotter.NewLinePoints(xys3)
+	lines3.Color = color.RGBA{G: 255, A: 255}
 
 	_ = plotutil.AddLines(p, caption1, xys1)
-	//_ = plotutil.AddLines(p, caption2, xys2)
 	p.Add(lines2)
-	_ = plotutil.AddLines(p, caption3, xys3)
-	_ = p.Save(800*vg.Inch, 3*vg.Inch, fileName)
+	p.Add(lines3)
+	_ = p.Save(800*vg.Inch, 10*vg.Inch, fileName)
 }
 
 func plotGraphics() {
-	source_wav_fd, _ := os.Open("/home/tass/database/icfpc2020/messages/radio-transmission-recording.wav")
+	source_wav_fd, _ := os.Open("/home/tass/database/icfpc2020/messages/signal01.wav") // radio-transmission-recording.wav
 	source_wav, _ := wav.New(source_wav_fd)
 
 	a, _ := source_wav.ReadFloats(source_wav.Samples)
@@ -120,13 +147,15 @@ func plotGraphics() {
 	data600 := make([]float64, n)
 
 	for ind := startInd; ind < stopInd; ind += 1 {
+		carrier500 := 0.3 * math.Sin(0.02*math.Pi+2*math.Pi*500.0*float64(ind)/float64(source_wav.SampleRate))
+		carrier600 := 0.3 * math.Sin(2*math.Pi*600.0*float64(ind)/float64(source_wav.SampleRate))
 		dataX[ind-startInd] = float64(ind)
 		dataRaw[ind-startInd] = float64(a[ind])
-		data500[ind-startInd] = f500.apply(float64(a[ind]))
-		data600[ind-startInd] = f600.apply(float64(a[ind]))
+		data500[ind-startInd] = f500.apply(float64(a[ind])) - carrier500 - 1.0
+		data600[ind-startInd] = f600.apply(float64(a[ind])) - 2.0 - carrier600
 	}
 
-	plotGraph(dataX, dataRaw,"raw", data500, "500", data600, "600", "w.svg")
+	plotGraph(dataX, dataRaw, "raw", data500, "500", data600, "600", "w.svg")
 }
 
 func main() {

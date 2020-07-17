@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -8,13 +9,8 @@ import (
 	"strings"
 )
 
-func main() {
-	serverURL := os.Args[1]
-	playerKey := os.Args[2]
-
-	log.Printf("ServerUrl: %s; PlayerKey: %s", serverURL, playerKey)
-
-	res, err := http.Post(serverURL, "text/plain", strings.NewReader(playerKey))
+func communicate(serverURL, message string) string {
+	res, err := http.Post(serverURL, "text/plain", strings.NewReader(message))
 	if err != nil {
 		log.Printf("Unexpected server response:\n%v", err)
 		os.Exit(1)
@@ -33,5 +29,18 @@ func main() {
 		os.Exit(2)
 	}
 
-	log.Printf("Server response: %s", body)
+	return string(body)
+}
+
+func main() {
+	serverURL := os.Args[1]
+	playerKey := os.Args[2]
+
+	log.Printf("ServerUrl: %s; PlayerKey: %s", serverURL, playerKey)
+
+	r1 := communicate(serverURL, playerKey)
+	fmt.Println("response1", r1)
+
+	r2 := communicate(serverURL, "0111000101010")
+	fmt.Println("response2", r2)
 }
