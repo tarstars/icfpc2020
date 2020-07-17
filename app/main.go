@@ -41,6 +41,9 @@ func main() {
 	r1 := communicate(serverURL, playerKey)
 	fmt.Println("response1", r1)
 
-	r2 := communicate(serverURL, "0111000101010")
-	fmt.Println("response2", r2)
+	for meter := 0; meter < 2000; meter += 1 {
+		s := fmt.Sprintf("%d", meter)
+		r2 := communicate(serverURL, s)
+		fmt.Println("request: ", s, " response2 ", r2)
+	}
 }
