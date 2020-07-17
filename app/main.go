@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -41,8 +42,9 @@ func main() {
 	r1 := communicate(serverURL, playerKey)
 	fmt.Println("response1", r1)
 
-	for meter := 0; meter < 2000; meter += 1 {
-		s := fmt.Sprintf("%d", meter)
+	var meter int64
+	for meter = 0; meter < 2000; meter += 1 {
+		s := strconv.FormatInt(meter, 2) // fmt.Sprintf("%d", meter)
 		r2 := communicate(serverURL, s)
 		fmt.Println("request: ", s, " response2 ", r2)
 	}
