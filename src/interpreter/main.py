@@ -4,6 +4,8 @@ import sys
 from collections import deque
 from typing import List
 
+import simplejson
+
 sys.setrecursionlimit(100000)
 
 
@@ -121,12 +123,7 @@ class Cdr:
 
 
 class BinaryFunction:
-    def __init__(
-            self,
-            func_name: str,
-            func_to_apply,
-            numerical_function=True
-    ):
+    def __init__(self, func_name: str, func_to_apply, numerical_function=True):
         self.func_name = func_name
         self.func_to_apply = func_to_apply
         self.numerical_function = numerical_function
@@ -139,7 +136,7 @@ class BinaryFunction:
             self.func_name,
             self.func_to_apply,
             val,
-            numerical_function=self.numerical_function
+            numerical_function=self.numerical_function,
         )
 
     def eval(self):
@@ -147,9 +144,7 @@ class BinaryFunction:
 
 
 class BinaryFunction1:
-    def __init__(
-            self, func_name, func_to_apply, val, numerical_function
-    ):
+    def __init__(self, func_name, func_to_apply, val, numerical_function):
         self.x1 = val
         self.func_name = func_name
         self.func_to_apply = func_to_apply
@@ -236,14 +231,6 @@ def sign(x: int):
     return 1 if x >= 0 else -1
 
 
-def FuncI():
-    def __repr__(self):
-        return "I()"
-
-    def apply(self, val):
-        return [val]
-
-
 def is_number(str_token):
     try:
         int(str_token)
@@ -276,43 +263,80 @@ def comb_s(a1, a2, a3):
 
 
 func_t = BinaryFunction(
-    func_name="FuncT",
-    func_to_apply=lambda x, y: x,
-    numerical_function=False,
+    func_name="FuncT", func_to_apply=lambda x, y: x, numerical_function=False,
 )
 
 func_f = BinaryFunction(
-    func_name="FuncF",
-    func_to_apply=lambda x, y: y,
-    numerical_function=False,
+    func_name="FuncF", func_to_apply=lambda x, y: y, numerical_function=False,
 )
 
 
 def comb_car(a1):
-    return Evaluable.from_function(
-        func=a1,
-        arg=func_t
-    )
+    return Evaluable.from_function(func=a1, arg=func_t)
 
 
 def comb_cdr(a1):
-    return Evaluable.from_function(
-        func=a1,
-        arg=func_f
-    )
+    return Evaluable.from_function(func=a1, arg=func_f)
 
 
 def comb_cons(a1, a2, a3):
     return Evaluable.from_function(
-        func=Evaluable.from_function(
-            func=a3,
-            arg=a1),
-        arg=a2
+        func=Evaluable.from_function(func=a3, arg=a1), arg=a2
     )
+
+
+def comb_is_nil(arg):
+    """
+    ap nil x0 = t
+    ap isnil nil   =   t
+    ap isnil ap ap cons x0 x1   =   f
+
+    :param arg:
+    :return:
+    """
+    val = arg.eval()
+    cond = isinstance(val, UnaryFunction) and val.function_name == "Nil"
+    return func_t if cond else func_f
 
 
 def func_lt(a1, a2):
     return func_t if a1.eval().val < a2.eval().val else func_f
+
+
+def is_cons(val_eval):
+    return isinstance(val_eval, TernaryFunction2) and val_eval.func_name == 'Cons'
+
+
+class DebugList:
+    def __init__(self, value, is_cons):
+        self.value = value
+        self.is_cons = is_cons
+
+    def __repr__(self):
+        return f"{self.value}"
+
+    def eval(self):
+        return self
+
+
+def comb_debug(val):
+    val_eval = val.eval()
+    if is_cons(val_eval):
+        x1, x2 = val_eval.x1, val_eval.x2
+        rec_x1 = comb_debug(x1)
+        rec_x2 = comb_debug(x2)
+        if rec_x2.is_cons:
+            return DebugList([rec_x1.value] + rec_x2.value, True)
+        else:
+            if rec_x2.value == 'Nil':
+                return DebugList([rec_x1.value], True)
+            return DebugList([rec_x1.value, rec_x2.value], True)
+    else:
+        if isinstance(val_eval, Number):
+            return DebugList(val_eval.val, False)
+        if isinstance(val_eval, UnaryFunction) and val_eval.function_name == 'Nil':
+            return DebugList('Nil', False)
+        return DebugList(val_eval, False)
 
 
 class Evaluable:
@@ -323,9 +347,16 @@ class Evaluable:
     """
 
     def __init__(self, func, func_arg, atomic):
+        if not (((func is not None) == (func_arg is not None)) and ((func is not None) != (atomic is not None))):
+            print()
         self.func = func
         self.func_arg = func_arg
         self.atomic = atomic
+
+    def __repr__(self):
+        if self.atomic is not None:
+            return f"atomic {self.atomic}"
+        return f"func {self.func} ({self.func_arg})"
 
     @classmethod
     def from_function(cls, func, arg):
@@ -339,6 +370,7 @@ class Evaluable:
     def from_tokens_list(cls, tokens: List):
         if isinstance(tokens[0], Ap):
             func, gobbled_first = Evaluable.from_tokens_list(tokens[1:])
+            assert func is not None
             func_arg, gobbled_second = Evaluable.from_tokens_list(
                 tokens[1 + gobbled_first:]
             )
@@ -365,7 +397,10 @@ class Evaluable:
             return self.func.apply(self.func_arg)
 
     def apply(self, arg):
-        return self.eval().apply(arg)
+        # logging.warning(f"before {str(self)} with argument = {arg}")
+        result = self.eval().apply(arg)
+        # logging.warning(f"after {str(self)} with argument = {arg} -> {result}")
+        return result
 
 
 def div_to_zero(x, y):
@@ -375,6 +410,7 @@ def div_to_zero(x, y):
 class Machine:
     def __init__(self, definitions):
         self.definitions = definitions
+        self.not_found_list = set()
 
     def parse_line(self, str_operator):
         operators = []
@@ -389,14 +425,25 @@ class Machine:
     def from_lines(cls, lines):
         definitions = {}
         self = cls(definitions=definitions)
-        for one_line in lines:
+        # "ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b pwr2 ap add -1"
+        for one_line in lines + [
+            "pwr2 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b pwr2 dec",
+            "checkerboard = ap ap s ap ap b s ap ap c ap ap b c ap ap b ap c ap c ap ap s ap ap b s ap ap b ap b ap ap s i i lt eq ap ap s mul i nil ap ap s ap ap b s ap ap b ap b cons ap ap s ap ap b s ap ap b ap b cons ap c div ap c ap ap s ap ap b b ap ap c ap ap b b add neg ap ap b ap s mul div ap ap c ap ap b b checkerboard ap ap c add 2",
+        ]:
             new_id, str_operator = map(lambda x: x.strip(), one_line.split("="))
-            tokens = self.parse_line(str_operator)
-            new_evaluable, gobbled = Evaluable.from_tokens_list(tokens=tokens)
-            if gobbled != len(tokens):
-                raise IndexError("wrong amount of tokens gobbled")
-            definitions[new_id] = new_evaluable
+            definitions[new_id] = self.from_str_operator(str_operator=str_operator)
+            if new_id in self.not_found_list:
+                self.not_found_list.remove(new_id)
+        if self.not_found_list:
+            raise ValueError("Not found: " + ",".join(self.not_found_list))
         return self
+
+    def from_str_operator(self, str_operator):
+        tokens = self.parse_line(str_operator)
+        new_evaluable, gobbled = Evaluable.from_tokens_list(tokens=tokens)
+        if gobbled != len(tokens):
+            raise IndexError("wrong amount of tokens gobbled")
+        return new_evaluable
 
     def eval(self, line):
         evaluable = Evaluable.from_tokens_list(self.parse_line(line))[0]
@@ -413,9 +460,9 @@ class Machine:
         elif is_number(str_token=str_token):
             return Number(int(str_token))
         elif str_token == "nil":
-            return Nil()
-        elif str_token[0] == ":" or str_token in self.definitions:
-            return StoredValue(str_token, machine=self)
+            return UnaryFunction(
+                function_name="Nil", numeric=False, function_to_apply=lambda x: func_t
+            )
         elif str_token == "neg":
             return UnaryFunction(function_name="Neg", function_to_apply=lambda x: -x)
         elif str_token == "c":
@@ -425,33 +472,52 @@ class Machine:
         elif str_token == "s":
             return TernaryFunction(func_name="CombS", func_to_apply=comb_s)
         elif str_token == "isnil":
-            return IsNil()
+            return UnaryFunction(
+                function_name="IsNil", function_to_apply=comb_is_nil, numeric=False
+            )
         elif str_token == "car":
-            return UnaryFunction(function_name="Car", function_to_apply=comb_car, numeric=False)
+            return UnaryFunction(
+                function_name="Car", function_to_apply=comb_car, numeric=False
+            )
         elif str_token == "eq":
-            return BinaryFunction(func_name="Eq", numerical_function=False, func_to_apply=lambda x, y: func_t if x.eval().val == y.eval().val else func_f)
+            return BinaryFunction(
+                func_name="Eq",
+                numerical_function=False,
+                func_to_apply=lambda x, y: func_t
+                if x.eval().val == y.eval().val
+                else func_f,
+            )
         elif str_token == "mul":
             return BinaryFunction(func_name="Mul", func_to_apply=lambda x, y: x * y)
         elif str_token == "add":
             return BinaryFunction(func_name="Add", func_to_apply=lambda x, y: x + y)
         elif str_token == "lt":
-            return BinaryFunction(func_name="Lt", func_to_apply=func_lt, numerical_function=False)
+            return BinaryFunction(
+                func_name="Lt", func_to_apply=func_lt, numerical_function=False
+            )
         elif str_token == "div":
             return BinaryFunction(func_name="Div", func_to_apply=div_to_zero)
         elif str_token == "i":
-            return FuncI()
+            return UnaryFunction(function_name="Ident", numeric=False, function_to_apply=lambda x: x)
         elif str_token == "t":
             return func_t
         elif str_token == "f":
             return func_f
         elif str_token == "cdr":
-            return UnaryFunction(function_name="Cdr", function_to_apply=comb_cdr, numeric=False)
+            return UnaryFunction(
+                function_name="Cdr", function_to_apply=comb_cdr, numeric=False
+            )
         elif str_token == "inc":
             return UnaryFunction(function_name="Inc", function_to_apply=lambda x: x + 1)
         elif str_token == "dec":
             return UnaryFunction(function_name="Dec", function_to_apply=lambda x: x - 1)
+        elif str_token == "list_debug":
+            return UnaryFunction(function_name="ListDebug", numeric=False, function_to_apply=comb_debug)
 
-        raise NotImplementedError(f"no token {str_token}")
+        if str_token not in self.definitions:
+            self.not_found_list.add(str_token)
+
+        return StoredValue(str_token, machine=self)
 
 
 class CanNotPerformProgram(BaseException):
@@ -509,6 +575,12 @@ class TestMachine(unittest.TestCase):
         self.assertEqual("Car()", str(m.eval(":1")))
         self.assertEqual("Cons()", str(m.eval(":2")))
 
+    def test_eq(self):
+        m = Machine.from_lines([":1 = ap ap eq 1 2", ":2 = ap ap eq 777 777", ])
+
+        self.assertEqual("FuncF()", str(m.eval(":1")))
+        self.assertEqual("FuncT()", str(m.eval(":2")))
+
     def test_lt(self):
         m = Machine.from_lines(
             [
@@ -526,10 +598,15 @@ class TestMachine(unittest.TestCase):
         self.assertEqual("Car()", str(m.eval(":1")))
         self.assertEqual("Cons()", str(m.eval(":2")))
 
-    def test_inc(self):
+    def test_inc_00(self):
         m = Machine.from_lines([":1 = ap inc 1"])
 
         self.assertEqual("Number(2)", str(m.eval(":1")))
+
+    def test_inc_01(self):
+        m = Machine.from_lines([":1 = ap inc -2"])
+
+        self.assertEqual("Number(-1)", str(m.eval(":1")))
 
     def test_s(self):
         m = Machine.from_lines([":1 = ap ap ap s add inc 1"])
@@ -545,6 +622,48 @@ class TestMachine(unittest.TestCase):
         m = Machine.from_lines([":1 = ap ap ap c div 1 20"])
 
         self.assertEqual("Number(20)", str(m.eval(":1")))
+
+    def test_nil(self):
+        m = Machine.from_lines([":1 = ap nil ap pwr2 1000000"])
+
+        self.assertEqual("FuncT()", str(m.eval(":1")))
+
+    def test_pwr2(self):
+        for pow_ind in range(5):
+            m = Machine.from_lines([f":1 = ap pwr2 {pow_ind}"])
+            self.assertEqual(f"Number({2 ** pow_ind})", str(m.eval(":1")))
+
+    def test_is_nil_00(self):
+        m = Machine.from_lines([":1 = ap isnil nil"])
+
+        self.assertEqual("FuncT()", str(m.eval(":1")))
+
+    def test_is_nil_01(self):
+        m = Machine.from_lines([":1 = ap isnil ap ap cons 10 nil"])
+
+        self.assertEqual("FuncF()", str(m.eval(":1")))
+
+    def test_is_nil_02(self):
+        m = Machine.from_lines([":1 = ap isnil ap ap cons nil nil"])
+
+        self.assertEqual("FuncF()", str(m.eval(":1")))
+
+    def test_identity_00(self):
+        m = Machine.from_lines([":1 = i 7"])
+
+        self.assertEqual("Number(7)", str(m.eval(":1")))
+
+    def test_checkerboard(self):
+        m = Machine.from_lines([":1 = ap list_debug ap ap checkerboard 7 0"])
+
+        val = m.eval(":1")
+
+        with open('/home/tass/database/icfpc2020/checker', 'w') as fd:
+            simplejson.dump(val.value, fd)
+
+        self.assertEqual(
+            "Cons_2(func func func func atomic CombS() (func func atomic CombB() (atomic CombS()) (func func atomic CombB() (func atomic CombB() (atomic Cons())) (func atomic CombC() (atomic Div())))) (func atomic CombC() (func func atomic CombS() (func func atomic CombB() (atomic CombB()) (func func atomic CombC() (func func atomic CombB() (atomic CombB()) (atomic Add())) (atomic Neg()))) (func func atomic CombB() (func atomic CombS() (atomic Mul())) (atomic Div())))) (atomic Number(7)) (atomic Number(0)), func func func func atomic CombC() (func func atomic CombB() (atomic CombB()) (atomic StoredValue(checkerboard))) (func func atomic CombC() (atomic Add()) (atomic Number(2))) (atomic Number(7)) (atomic Number(0)))",
+            str(val))
 
 
 """
