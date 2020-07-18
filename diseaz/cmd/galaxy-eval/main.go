@@ -31,4 +31,5 @@ func main() {
 
 	tok := interpreter.ParseReader(c, f)
 	log.Printf("Result: %s", tok)
+	log.Printf("Evals: %d", c.EvalCount)
 }

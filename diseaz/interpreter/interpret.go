@@ -29,3 +29,30 @@ func Interpret(c Context, p Program) (Token, error) {
 	}
 	return pout[0], nil
 }
+
+func TailEval(c Context, t Token) Token {
+	r, _ := TailEvalDo(c, t)
+	return r
+}
+
+func TailEvalDo(c Context, t Token) (Token, bool) {
+	c.CountEval()
+	// lvl := c.Enter()
+	// defer c.Leave()
+	// indent := strings.Repeat("  ", lvl)
+
+	did := false
+	do := true
+	for do {
+		u := t
+		// log.Printf("%3d> %s%s", lvl, indent, u)
+		t, do = u.Eval(c)
+		// m := "=="
+		if do {
+			did = true
+			// m = "=>"
+		}
+		// log.Printf("%3d< %s%s %s", lvl, indent, m, t)
+	}
+	return t, did
+}
