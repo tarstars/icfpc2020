@@ -50,7 +50,7 @@ class Nil:
 
 
 class StoredValue:
-    def __init__(self, vid: str, machine: 'Machine'):
+    def __init__(self, vid: str, machine: "Machine"):
         self.vid = vid
         self.machine = machine
 
@@ -62,74 +62,6 @@ class StoredValue:
 
     def expand(self):
         return self.machine.definitions[self.vid]
-
-
-class Neg:
-    def __repr__(self):
-        return f"Neg()"
-
-    def apply(self, val):
-        return [Number(-val.val)]
-
-
-class CombC:
-    def __init__(self):
-        self.a1 = None
-        self.a2 = None
-
-    def __repr__(self):
-        return f"CombC({self.a1}, {self.a2})"
-
-    def apply(self, val):
-        if self.a1 is None:
-            self.a1 = val
-            return [self]
-
-        if self.a2 is None:
-            self.a2 = val
-            return [self]
-
-        return [Ap(), Ap(), self.a1, val, self.a2]
-
-
-class CombB:
-    def __init__(self):
-        self.a1 = None
-        self.a2 = None
-
-    def __repr__(self):
-        return f"CombC({self.a1}, {self.a2})"
-
-    def apply(self, val):
-        if self.a1 is None:
-            self.a1 = val
-            return [self]
-
-        if self.a2 is None:
-            self.a2 = val
-            return [self]
-
-        return [Ap(), self.a1, Ap(), self.a2, val]
-
-
-class CombS:
-    def __init__(self):
-        self.a1 = None
-        self.a2 = None
-
-    def __repr__(self):
-        return f"CombC({self.a1}, {self.a2})"
-
-    def apply(self, val):
-        if self.a1 is None:
-            self.a1 = val
-            return [self]
-
-        if self.a2 is None:
-            self.a2 = val
-            return [self]
-
-        return [Ap(), Ap(), self.a1, val, Ap(), self.a2, val]
 
 
 class IsNil:
@@ -188,70 +120,58 @@ class Cdr:
         return [Ap(), val, FunF()]
 
 
-class Inc:
-    def __repr__(self):
-        return "Inc()"
-
-    def apply(self, val):
-        return [Number(val.val + 1)]
-
-
-class Dec:
-    def __repr__(self):
-        return "Dec()"
-
-    def apply(self, val):
-        return [Number(val.val - 1)]
-
-
-class Eq:
-    def __init__(self):
-        self.a1 = None
-
-    def __repr__(self):
-        return f"Eq({self.a1})"
-
-    def apply(self, val):
-        if self.a1 is None:
-            self.a1 = val
-            return [self]
-
-        if not isinstance(self.a1, Number):
-            raise ValueError("not number in eq")
-        if not isinstance(val, Number):
-            raise ValueError("not number in eq")
-
-        return [FunT() if self.a1.val == val.val else FunF()]
-
-
-class Mul:
-    def __repr__(self):
-        return f"Mul()"
-
-    def apply(self, val):
-        return Mul1(val)
-
-
-class Mul1:
-    def __init__(self, x1):
-        self.x1 = x1
-
-    def __repr__(self):
-        return f"Mul({self.x1})"
-
-    def apply(self, val):
-        arg1 = self.x1.eval()
-        arg2 = val.eval()
-
-        if not isinstance(self.x1, Number):
-            raise ValueError("not number in eq")
-        if not isinstance(val, Number):
-            raise ValueError("not number in eq")
-
-        return Number(arg1.val * arg2.val)
-
-
 class BinaryFunction:
+    def __init__(
+            self,
+            func_name: str,
+            func_to_apply,
+            numerical_function=True
+    ):
+        self.func_name = func_name
+        self.func_to_apply = func_to_apply
+        self.numerical_function = numerical_function
+
+    def __repr__(self):
+        return f"{self.func_name}()"
+
+    def apply(self, val):
+        return BinaryFunction1(
+            self.func_name,
+            self.func_to_apply,
+            val,
+            numerical_function=self.numerical_function
+        )
+
+    def eval(self):
+        return self
+
+
+class BinaryFunction1:
+    def __init__(
+            self, func_name, func_to_apply, val, numerical_function
+    ):
+        self.x1 = val
+        self.func_name = func_name
+        self.func_to_apply = func_to_apply
+        self.numerical_function = numerical_function
+
+    def __repr__(self):
+        return f"{self.func_name}({self.x1})"
+
+    def apply(self, val):
+        if self.numerical_function:
+            arg1 = self.x1.eval()
+            arg2 = val.eval()
+
+            if not isinstance(arg1, Number):
+                raise ValueError(f"not number1 in eq for {self.func_name}")
+            if not isinstance(arg2, Number):
+                raise ValueError(f"not number2 in eq for {self.func_name}")
+            return Number(self.func_to_apply(arg1.val, arg2.val))
+        return self.func_to_apply(self.x1, val).eval()
+
+
+class TernaryFunction:
     def __init__(self, func_name: str, func_to_apply):
         self.func_name = func_name
         self.func_to_apply = func_to_apply
@@ -260,78 +180,60 @@ class BinaryFunction:
         return f"{self.func_name}()"
 
     def apply(self, val):
-        return BinaryFunction1(self.func_name, self.func_to_apply, val)
+        return TernaryFunction1(self.func_name, self.func_to_apply, val)
 
 
-class BinaryFunction1:
+class TernaryFunction1:
     def __init__(self, func_name, func_to_apply, val):
         self.x1 = val
         self.func_name = func_name
         self.func_to_apply = func_to_apply
 
     def __repr__(self):
-        return f"{self.func_name}({self.x1})"
+        return f"{self.func_name}_1({self.x1})"
 
     def apply(self, val):
-        arg1 = self.x1.eval()
-        arg2 = val.eval()
+        return TernaryFunction2(self.func_name, self.func_to_apply, self.x1, val)
 
-        if not isinstance(arg1, Number):
-            raise ValueError("not number in eq")
-        if not isinstance(arg2, Number):
-            raise ValueError("not number in eq")
 
-        return Number(self.func_to_apply(arg1.val, arg2.val))
+class TernaryFunction2:
+    def __init__(self, func_name, func_to_apply, x1, val):
+        self.x1 = x1
+        self.x2 = val
+        self.func_name = func_name
+        self.func_to_apply = func_to_apply
+
+    def __repr__(self):
+        return f"{self.func_name}_2({self.x1}, {self.x2})"
+
+    def apply(self, val):
+        arg1 = self.x1
+        arg2 = self.x2
+        arg3 = val
+
+        return self.func_to_apply(arg1, arg2, arg3).eval()
 
 
 class UnaryFunction:
-    def __init__(self, function_name, function_to_apply):
+    def __init__(self, function_name, function_to_apply, numeric=True):
         self.function_name = function_name
         self.function_to_apply = function_to_apply
+        self.numeric = numeric
 
     def __repr__(self):
         return f"{self.function_name}()"
 
     def apply(self, val):
-        if not isinstance(val, Number):
-            raise ValueError("not number in eq")
-
-        return self.function_to_apply(val.eval())
-
-
-class Add:
-    def __repr__(self):
-        return f"Add()"
-
-    def apply(self, val):
-        return Add1(val)
-
-
-class Add1:
-    def __init__(self, val):
-        self.x1 = val
-
-    def __repr__(self):
-        return f"Add({self.x1})"
-
-    def apply(self, val):
-        arg1 = self.x1.eval()
-        arg2 = val.eval()
-
-        if not isinstance(arg1, Number):
-            raise ValueError("not number in eq")
-        if not isinstance(arg2, Number):
-            raise ValueError("not number in eq")
-
-        return Number(arg1.val + arg2.val)
+        if self.numeric:
+            result = val.eval()
+            if not isinstance(result, Number):
+                raise ValueError(f"not number in eq for {self.function_name}")
+            return Number(self.function_to_apply(result.val))
+        return self.function_to_apply(val).eval()
 
 
 def sign(x: int):
     return 1 if x >= 0 else -1
-
-
-
-
 
 
 def FuncI():
@@ -354,6 +256,65 @@ class LineNotProcessed(BaseException):
     pass
 
 
+def comb_b(a1, a2, a3):
+    return Evaluable.from_function(
+        func=a1, arg=Evaluable.from_function(func=a2, arg=a3)
+    )
+
+
+def comb_c(a1, a2, a3):
+    return Evaluable.from_function(
+        func=Evaluable.from_function(func=a1, arg=a3), arg=a2
+    )
+
+
+def comb_s(a1, a2, a3):
+    return Evaluable.from_function(
+        func=Evaluable.from_function(func=a1, arg=a3),
+        arg=Evaluable.from_function(func=a2, arg=a3),
+    )
+
+
+func_t = BinaryFunction(
+    func_name="FuncT",
+    func_to_apply=lambda x, y: x,
+    numerical_function=False,
+)
+
+func_f = BinaryFunction(
+    func_name="FuncF",
+    func_to_apply=lambda x, y: y,
+    numerical_function=False,
+)
+
+
+def comb_car(a1):
+    return Evaluable.from_function(
+        func=a1,
+        arg=func_t
+    )
+
+
+def comb_cdr(a1):
+    return Evaluable.from_function(
+        func=a1,
+        arg=func_f
+    )
+
+
+def comb_cons(a1, a2, a3):
+    return Evaluable.from_function(
+        func=Evaluable.from_function(
+            func=a3,
+            arg=a1),
+        arg=a2
+    )
+
+
+def func_lt(a1, a2):
+    return func_t if a1.eval().val < a2.eval().val else func_f
+
+
 class Evaluable:
     """
     E -> raw_object | ap E E
@@ -367,13 +328,26 @@ class Evaluable:
         self.atomic = atomic
 
     @classmethod
+    def from_function(cls, func, arg):
+        return cls(func=func, func_arg=arg, atomic=None)
+
+    @classmethod
+    def from_atomic(cls, atomic):
+        return cls(func=None, func_arg=None, atomic=atomic)
+
+    @classmethod
     def from_tokens_list(cls, tokens: List):
         if isinstance(tokens[0], Ap):
             func, gobbled_first = Evaluable.from_tokens_list(tokens[1:])
-            func_arg, gobbled_second = Evaluable.from_tokens_list(tokens[1 + gobbled_first:])
-            return Evaluable(func=func, func_arg=func_arg, atomic=None), gobbled_first + gobbled_second + 1
+            func_arg, gobbled_second = Evaluable.from_tokens_list(
+                tokens[1 + gobbled_first:]
+            )
+            return (
+                Evaluable.from_function(func=func, arg=func_arg),
+                gobbled_first + gobbled_second + 1,
+            )
         else:
-            return Evaluable(None, None, tokens[0]), 1
+            return Evaluable.from_atomic(tokens[0]), 1
 
     def is_atomic(self):
         return self.atomic is not None
@@ -383,7 +357,7 @@ class Evaluable:
 
     def eval(self):
         if self.is_atomic():
-            if hasattr(self.atomic, 'expand'):
+            if hasattr(self.atomic, "expand"):
                 return self.atomic.expand().eval()
             else:
                 return self.atomic
@@ -420,7 +394,7 @@ class Machine:
             tokens = self.parse_line(str_operator)
             new_evaluable, gobbled = Evaluable.from_tokens_list(tokens=tokens)
             if gobbled != len(tokens):
-                raise IndexError('wrong amount of tokens gobbled')
+                raise IndexError("wrong amount of tokens gobbled")
             definitions[new_id] = new_evaluable
         return self
 
@@ -435,7 +409,7 @@ class Machine:
         if str_token == "ap":
             return Ap()
         elif str_token == "cons":
-            return Cons()
+            return TernaryFunction(func_name="Cons", func_to_apply=comb_cons)
         elif is_number(str_token=str_token):
             return Number(int(str_token))
         elif str_token == "nil":
@@ -443,38 +417,39 @@ class Machine:
         elif str_token[0] == ":" or str_token in self.definitions:
             return StoredValue(str_token, machine=self)
         elif str_token == "neg":
-            return UnaryFunction(function_name='Neg', function_to_apply=lambda x: -x)
+            return UnaryFunction(function_name="Neg", function_to_apply=lambda x: -x)
         elif str_token == "c":
-            return CombC()
+            return TernaryFunction(func_name="CombC", func_to_apply=comb_c)
         elif str_token == "b":
-            return CombB()
+            return TernaryFunction(func_name="CombB", func_to_apply=comb_b)
         elif str_token == "s":
-            return CombS()
+            return TernaryFunction(func_name="CombS", func_to_apply=comb_s)
         elif str_token == "isnil":
             return IsNil()
         elif str_token == "car":
-            return Car()
+            return UnaryFunction(function_name="Car", function_to_apply=comb_car, numeric=False)
         elif str_token == "eq":
-            return BinaryFunction(func_name='Eq', func_to_apply=lambda x, y: x == y)
+            return BinaryFunction(func_name="Eq", numerical_function=False, func_to_apply=lambda x, y: func_t if x.eval().val == y.eval().val else func_f)
         elif str_token == "mul":
-            return BinaryFunction(func_name='Mul', func_to_apply=lambda x, y: x * y)
+            return BinaryFunction(func_name="Mul", func_to_apply=lambda x, y: x * y)
         elif str_token == "add":
-            return BinaryFunction(func_name='Add', func_to_apply=lambda x, y: x + y)
+            return BinaryFunction(func_name="Add", func_to_apply=lambda x, y: x + y)
         elif str_token == "lt":
-            return BinaryFunction(func_name='Add', func_to_apply=lambda x, y: x < y)
+            return BinaryFunction(func_name="Lt", func_to_apply=func_lt, numerical_function=False)
         elif str_token == "div":
-            return BinaryFunction(func_name='Div', func_to_apply=div_to_zero)
+            return BinaryFunction(func_name="Div", func_to_apply=div_to_zero)
         elif str_token == "i":
             return FuncI()
         elif str_token == "t":
-            return FunT()
+            return func_t
+        elif str_token == "f":
+            return func_f
         elif str_token == "cdr":
-            return Cdr()
+            return UnaryFunction(function_name="Cdr", function_to_apply=comb_cdr, numeric=False)
         elif str_token == "inc":
-            return UnaryFunction(function_name='Inc', function_to_apply=lambda x: x + 1)
+            return UnaryFunction(function_name="Inc", function_to_apply=lambda x: x + 1)
         elif str_token == "dec":
-            return UnaryFunction(function_name='Dec', function_to_apply=lambda x: x - 1)
-
+            return UnaryFunction(function_name="Dec", function_to_apply=lambda x: x - 1)
 
         raise NotImplementedError(f"no token {str_token}")
 
@@ -488,7 +463,7 @@ def main():
     with open("/home/tass/database/icfpc2020/messages/galaxy.txt") as fd:
         all_lines = [line.strip() for line in fd.readlines()]
         machine = Machine.from_lines(all_lines)
-        ans = machine.eval('galaxy')
+        ans = machine.eval("galaxy")
         print(ans)
 
 
@@ -508,9 +483,7 @@ class TestMachine(unittest.TestCase):
 
     def test_integer_division(self):
         m = Machine.from_lines(
-            [":1 = ap ap div 4 2",
-             ":2 = ap ap div 6 -2",
-             ":3 = ap ap div 5 -3"]
+            [":1 = ap ap div 4 2", ":2 = ap ap div 6 -2", ":3 = ap ap div 5 -3"]
         )
 
         self.assertEqual("Number(2)", str(m.eval(":1")))
@@ -534,7 +507,7 @@ class TestMachine(unittest.TestCase):
         )
 
         self.assertEqual("Car()", str(m.eval(":1")))
-        self.assertEqual("Cons(None, None)", str(m.eval(":2")))
+        self.assertEqual("Cons()", str(m.eval(":2")))
 
     def test_lt(self):
         m = Machine.from_lines(
@@ -544,8 +517,14 @@ class TestMachine(unittest.TestCase):
             ]
         )
 
-        self.assertEqual("Cons(None, None)", str(m.eval(":1")))
+        self.assertEqual("Cons()", str(m.eval(":1")))
         self.assertEqual("Car()", str(m.eval(":2")))
+
+    def test_true_false(self):
+        m = Machine.from_lines([":1 = ap ap t car cons", ":2 = ap ap f car cons", ])
+
+        self.assertEqual("Car()", str(m.eval(":1")))
+        self.assertEqual("Cons()", str(m.eval(":2")))
 
     def test_inc(self):
         m = Machine.from_lines([":1 = ap inc 1"])
@@ -567,6 +546,11 @@ class TestMachine(unittest.TestCase):
 
         self.assertEqual("Number(20)", str(m.eval(":1")))
 
+
+"""
+ap ap ap b inc dec 111
+ap inc ap dec 111
+"""
 
 if __name__ == "__main__":
     unittest.main()
