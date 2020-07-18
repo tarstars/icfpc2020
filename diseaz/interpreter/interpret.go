@@ -4,32 +4,28 @@ import (
 	"fmt"
 )
 
-func Interpret(c Context, p Program) (Program, error) {
+func Interpret(c Context, p Program) (Token, error) {
 	pin := p.Clone()
 	var pout Program
 	for t, notEmpty := pin.Pops(); notEmpty; t, notEmpty = pin.Pops() {
-		switch tt := t.(type) {
-		case Var:
-			vp, err := c.GetVar(tt.N)
-			if err != nil {
-				return nil, err
-			}
-			pin.PushProgram(vp)
+		// log.Printf("Token: %s", t)
+		switch t.(type) {
 		case Ap:
-			t1 := pout.Pop()
-			f, ok := t1.(Func)
-			if !ok {
-				return nil, fmt.Errorf("Apply non-function %s", t1)
+			ft := pout.Pop()
+			at := pout.Pop()
+			ff, ok := ft.(Func)
+			if ok {
+				pout.Push(ff.Apply(at))
+			} else {
+				pout.Push(Ap2{F: ft, A: at})
 			}
-			t2 := pout.Pop()
-			ap, err := f.Apply(t2)
-			if err != nil {
-				return nil, err
-			}
-			pin.PushProgram(ap)
 		default:
 			pout.Push(t)
 		}
+		// log.Printf("Out: %s", pout)
 	}
-	return pout, nil
+	if len(pout) != 1 {
+		return nil, fmt.Errorf("Invalid compilation result: %s", pout)
+	}
+	return pout[0], nil
 }
