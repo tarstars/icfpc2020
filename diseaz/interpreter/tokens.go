@@ -2,7 +2,9 @@ package interpreter
 
 import (
 	"fmt"
+	"log"
 	"strconv"
+	"strings"
 )
 
 type Token interface {
@@ -28,6 +30,10 @@ type Ap struct{}
 
 func (t Ap) Eval(c Context) Token {
 	return t
+}
+
+func (t Ap) String() string {
+	return "ap"
 }
 
 type Ap2 struct {
@@ -367,49 +373,74 @@ func (t Lt2) String() string {
 	return fmt.Sprintf("(lt %s %s)", t.X0, t.X1)
 }
 
-// type Modulate struct{}
+type Modulate struct{}
 
-// func (t Modulate) Apply(v Token) (Program, error) {
-// 	return nil, fmt.Errorf("%s not implemented", t.String())
-// }
+func (t Modulate) Eval(c Context) Token {
+	return t
+}
 
-// func (t Modulate) String() string {
-// 	return "mod"
-// }
+func (t Modulate) Apply(v Token) Token {
+	log.Panicf("%s not implemented", t)
+	return nil
+}
 
-// type Demodulate struct{}
+func (t Modulate) String() string {
+	return "mod"
+}
 
-// func (t Demodulate) Apply(v Token) (Program, error) {
-// 	return nil, fmt.Errorf("%s not implemented", t.String())
-// }
+type Demodulate struct{}
 
-// func (t Demodulate) String() string {
-// 	return "dem"
-// }
+func (t Demodulate) Eval(c Context) Token {
+	return t
+}
 
-// type Send struct{}
+func (t Demodulate) Apply(v Token) Token {
+	log.Panicf("%s not implemented", t)
+	return nil
+}
 
-// func (t Send) Apply(v Token) (Program, error) {
-// 	return nil, fmt.Errorf("%s not implemented", t.String())
-// }
+func (t Demodulate) String() string {
+	return "dem"
+}
 
-// func (t Send) String() string {
-// 	return "send"
-// }
+type Send struct{}
 
-// type Neg struct{}
+func (t Send) Eval(c Context) Token {
+	return t
+}
 
-// func (t Neg) Apply(v Token) (Program, error) {
-// 	w, ok := v.(Value)
-// 	if !ok {
-// 		return nil, fmt.Errorf("Invalid argument: %s(%s)", t, v)
-// 	}
-// 	return Program{Int{V: -w.Value()}}, nil
-// }
+func (t Send) Apply(v Token) Token {
+	log.Panicf("%s not implemented", t)
+	return nil
+}
 
-// func (t Neg) String() string {
-// 	return "neg"
-// }
+func (t Send) String() string {
+	return "send"
+}
+
+type Neg struct{}
+type Neg1 struct {
+	X0 Token
+}
+
+func (t Neg) Apply(v Token) Token {
+	return Neg1{X0: v}
+}
+
+func (t Neg) Eval(c Context) Token {
+	return t
+}
+
+func (t Neg1) Eval(c Context) Token {
+	x0 := t.X0.Eval(c).(Value)
+	r := Int{V: -x0.Value()}
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t Neg) String() string {
+	return "neg"
+}
 
 type S struct{}
 type S1 struct {
@@ -438,16 +469,10 @@ func (t S2) Apply(v Token) Token {
 }
 
 func (t S3) Eval(c Context) Token {
-	r := Ap2{
-		F: Ap2{
-			F: t.X0,
-			A: t.X2,
-		},
-		A: Ap2{
-			F: t.X1,
-			A: t.X2,
-		},
-	}.Eval(c)
+	y1 := t.X0.Eval(c).(Func)
+	y2 := y1.Apply(t.X2).Eval(c).(Func)
+	y3 := t.X1.(Func).Apply(t.X2)
+	r := y2.Apply(y3).Eval(c)
 	// log.Printf("%s => %s", t, r)
 	return r
 }
@@ -507,13 +532,9 @@ func (t C2) Apply(v Token) Token {
 }
 
 func (t C3) Eval(c Context) Token {
-	r := Ap2{
-		F: Ap2{
-			F: t.X0,
-			A: t.X2,
-		},
-		A: t.X1,
-	}.Eval(c)
+	x0 := t.X0.Eval(c).(Func)
+	y1 := x0.Apply(t.X2).Eval(c).(Func)
+	r := y1.Apply(t.X1).Eval(c)
 	// log.Printf("%s => %s", t, r)
 	return r
 }
@@ -615,13 +636,20 @@ func (t B3) String() string {
 type Pwr2 struct{}
 
 func (t Pwr2) Eval(c Context) Token {
-	r := Ap2{
-		F: S1{X0: C2{X0: Eq1{X0: Int{V: 0}}, X1: Int{V: 1}}},
-		A: Ap2{
-			F: B1{X0: Mul1{X0: Int{V: 2}}},
-			A: Ap2{
-				F: B1{X0: Pwr2{}},
-				A: Add1{X0: Int{V: -1}},
+	r := S2{
+		X0: C2{
+			X0: Eq1{
+				X0: Int{V: 0},
+			},
+			X1: Int{V: 1},
+		},
+		X1: B2{
+			X0: Mul1{
+				X0: Int{V: 2},
+			},
+			X1: B2{
+				X0: Pwr2{},
+				X1: Dec{},
 			},
 		},
 	}.Eval(c)
@@ -631,6 +659,33 @@ func (t Pwr2) Eval(c Context) Token {
 
 func (t Pwr2) String() string {
 	return "pwr2"
+}
+
+type I struct{}
+type I1 struct {
+	X0 Token
+}
+
+func (t I) Apply(v Token) Token {
+	return I1{X0: v}
+}
+
+func (t I1) Eval(c Context) Token {
+	r := t.X0.Eval(c)
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t I) Eval(c Context) Token {
+	return t
+}
+
+func (t I) String() string {
+	return "i"
+}
+
+func (t I1) String() string {
+	return fmt.Sprintf("(i %s)", t.X0)
 }
 
 type True struct{}
@@ -713,4 +768,351 @@ func (t False1) String() string {
 
 func (t False2) String() string {
 	return fmt.Sprintf("(f ? %s)", t.X1)
+}
+
+type Cons struct{}
+type Cons1 struct {
+	X0 Token
+}
+type Cons2 struct {
+	X0 Token
+	X1 Token
+}
+type Cons3 struct {
+	X0 Token
+	X1 Token
+	X2 Token
+}
+type Vec struct {
+	Cons
+}
+
+func (t Cons) Apply(v Token) Token {
+	return Cons1{X0: v}
+}
+
+func (t Cons1) Apply(v Token) Token {
+	return Cons2{X0: t.X0, X1: v}
+}
+
+func (t Cons2) Apply(v Token) Token {
+	return Cons3{X0: t.X0, X1: t.X1, X2: v}
+}
+
+func (t Cons3) Eval(c Context) Token {
+	y1 := t.X2.Eval(c).(Func).Apply(t.X0).Eval(c).(Func)
+	r := y1.Apply(t.X1).Eval(c)
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t Cons) Eval(c Context) Token {
+	return t
+}
+
+func (t Cons1) Eval(c Context) Token {
+	return t
+}
+
+func (t Cons2) Eval(c Context) Token {
+	return t
+}
+
+func (t Cons2) Car() Token {
+	return t.X0
+}
+
+func (t Cons2) Cdr() Token {
+	return t.X1
+}
+
+func (t Cons2) IsNil() bool {
+	return false
+}
+
+func (t Cons) String() string {
+	return "cons"
+}
+
+func (t Cons1) String() string {
+	return fmt.Sprintf("(cons %s)", t.X0)
+}
+
+func (t Cons2) String() string {
+	return fmt.Sprintf("(cons %s %s)", t.X0, t.X1)
+}
+
+func (t Cons3) String() string {
+	return fmt.Sprintf("(cons %s %s %s)", t.X0, t.X1, t.X2)
+}
+
+type Car struct{}
+type Car1 struct {
+	X0 Token
+}
+
+func (t Car) Apply(v Token) Token {
+	return Car1{X0: v}
+}
+
+func (t Car1) Eval(c Context) Token {
+	y1 := t.X0.Eval(c).(Func)
+	r := y1.Apply(True{}).Eval(c)
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t Car) Eval(c Context) Token {
+	return t
+}
+
+func (t Car) String() string {
+	return "car"
+}
+
+func (t Car1) String() string {
+	return fmt.Sprintf("(car %s)", t.X0)
+}
+
+type Cdr struct{}
+type Cdr1 struct {
+	X0 Token
+}
+
+func (t Cdr) Apply(v Token) Token {
+	return Cdr1{X0: v}
+}
+
+func (t Cdr1) Eval(c Context) Token {
+	y1 := t.X0.Eval(c).(Func)
+	r := y1.Apply(False{}).Eval(c)
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t Cdr) Eval(c Context) Token {
+	return t
+}
+
+func (t Cdr) String() string {
+	return "cdr"
+}
+
+func (t Cdr1) String() string {
+	return fmt.Sprintf("(cdr %s)", t.X0)
+}
+
+type Nil struct{}
+type Nil1 struct{}
+
+func (t Nil) Apply(v Token) Token {
+	return Nil1{}
+}
+
+func (t Nil1) Eval(c Context) Token {
+	return True{}
+}
+
+func (t Nil) Eval(c Context) Token {
+	return t
+}
+
+func (t Nil) Car() Token {
+	return Nil{}
+}
+
+func (t Nil) Cdr() Token {
+	return Nil{}
+}
+
+func (t Nil) IsNil() bool {
+	return true
+}
+
+func (t Nil) String() string {
+	return "nil"
+}
+
+func (t Nil1) String() string {
+	return "(nil ?)"
+}
+
+type isNil struct{}
+type isNil1 struct{}
+type isNil2 struct{}
+
+func (t isNil) Apply(v Token) Token {
+	return isNil1{}
+}
+
+func (t isNil1) Apply(v Token) Token {
+	return isNil2{}
+}
+
+func (t isNil2) Eval(c Context) Token {
+	return False{}
+}
+
+func (t isNil) Eval(c Context) Token {
+	return t
+}
+
+func (t isNil1) Eval(c Context) Token {
+	return t
+}
+
+func (t isNil) String() string {
+	return "*isnil*"
+}
+
+func (t isNil1) String() string {
+	return "(*isnil* ?)"
+}
+
+func (t isNil2) String() string {
+	return "(*isnil* ? ?)"
+}
+
+type IsNil struct{}
+type IsNil1 struct {
+	X0 Token
+}
+
+func (t IsNil) Apply(v Token) Token {
+	return IsNil1{X0: v}
+}
+
+func (t IsNil1) Eval(c Context) Token {
+	x0 := t.X0.Eval(c).(Func)
+	r := x0.Apply(isNil{}).Eval(c)
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t IsNil) Eval(c Context) Token {
+	return t
+}
+
+func (t IsNil) String() string {
+	return "isnil"
+}
+
+func (t IsNil1) String() string {
+	return fmt.Sprintf("(isnil %s)", t.X0)
+}
+
+type Point struct {
+	X int64
+	Y int64
+}
+
+func (p Point) String() string {
+	return fmt.Sprintf("(%d, %d)", p.X, p.Y)
+}
+
+type Points []Point
+
+func (ps Points) Eval(c Context) Token {
+	return ps
+}
+
+func (ps Points) String() string {
+	var pp []string
+	for _, p := range ps {
+		pp = append(pp, p.String())
+	}
+	return "(" + strings.Join(pp, " ") + ")"
+}
+
+type ICons interface {
+	Car() Token
+	Cdr() Token
+	IsNil() bool
+}
+
+func ListPoints(c Context, v Token) Points {
+	var r Points
+	for i := v.(ICons); !i.IsNil(); i = i.Cdr().Eval(c).(ICons) {
+		p := i.Car().Eval(c).(ICons)
+		x := p.Car().Eval(c).(Int).V
+		y := p.Cdr().Eval(c).(Int).V
+		r = append(r, Point{X: x, Y: y})
+	}
+	return r
+}
+
+func DrawPoints(c Context, v Token) Points {
+	ps := ListPoints(c, v.Eval(c))
+	log.Printf("Draw %s", ps)
+	return ps
+}
+
+type Draw struct{}
+type Draw1 struct {
+	X0 Token
+}
+
+func (t Draw) Apply(v Token) Token {
+	return Draw1{X0: v}
+}
+
+func (t Draw1) Eval(c Context) Token {
+	return DrawPoints(c, t.X0)
+}
+
+func (t Draw) Eval(c Context) Token {
+	return t
+}
+
+func (t Draw) String() string {
+	return "draw"
+}
+
+func (t Draw1) String() string {
+	return fmt.Sprintf("(draw %s)", t.X0)
+}
+
+type Checkerboard struct{}
+
+func (t Checkerboard) Apply(v Token) Token {
+	log.Panicf("%s not implemented", t)
+	return nil
+}
+
+func (t Checkerboard) Eval(c Context) Token {
+	return t
+}
+
+func (t Checkerboard) String() string {
+	return "checkerboard"
+}
+
+type Multipledraw struct{}
+type Multipledraw1 struct {
+	X0 Token
+}
+
+func (t Multipledraw) Apply(v Token) Token {
+	return Multipledraw1{X0: v}
+}
+
+func (t Multipledraw1) Eval(c Context) Token {
+	var r Points
+	v := t.X0.Eval(c)
+	for i := v.(ICons); !i.IsNil(); i = i.Cdr().Eval(c).(ICons) {
+		r = append(r, DrawPoints(c, i.Car())...)
+	}
+	return r
+}
+
+func (t Multipledraw) Eval(c Context) Token {
+	return t
+}
+
+func (t Multipledraw) String() string {
+	return "multipledraw"
+}
+
+func (t Multipledraw1) String() string {
+	return fmt.Sprintf("(multipledraw %s)", t.X0)
 }
