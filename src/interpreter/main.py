@@ -304,7 +304,7 @@ def func_lt(a1, a2):
 
 
 def is_cons(val_eval):
-    return isinstance(val_eval, TernaryFunction2) and val_eval.func_name == 'Cons'
+    return isinstance(val_eval, TernaryFunction2) and val_eval.func_name == "Cons"
 
 
 class DebugList:
@@ -328,14 +328,14 @@ def comb_debug(val):
         if rec_x2.is_cons:
             return DebugList([rec_x1.value] + rec_x2.value, True)
         else:
-            if rec_x2.value == 'Nil':
+            if rec_x2.value == "Nil":
                 return DebugList([rec_x1.value], True)
             return DebugList([rec_x1.value, rec_x2.value], True)
     else:
         if isinstance(val_eval, Number):
             return DebugList(val_eval.val, False)
-        if isinstance(val_eval, UnaryFunction) and val_eval.function_name == 'Nil':
-            return DebugList('Nil', False)
+        if isinstance(val_eval, UnaryFunction) and val_eval.function_name == "Nil":
+            return DebugList("Nil", False)
         return DebugList(val_eval, False)
 
 
@@ -347,7 +347,10 @@ class Evaluable:
     """
 
     def __init__(self, func, func_arg, atomic):
-        if not (((func is not None) == (func_arg is not None)) and ((func is not None) != (atomic is not None))):
+        if not (
+            ((func is not None) == (func_arg is not None))
+            and ((func is not None) != (atomic is not None))
+        ):
             print()
         self.func = func
         self.func_arg = func_arg
@@ -372,7 +375,7 @@ class Evaluable:
             func, gobbled_first = Evaluable.from_tokens_list(tokens[1:])
             assert func is not None
             func_arg, gobbled_second = Evaluable.from_tokens_list(
-                tokens[1 + gobbled_first:]
+                tokens[1 + gobbled_first :]
             )
             return (
                 Evaluable.from_function(func=func, arg=func_arg),
@@ -498,7 +501,9 @@ class Machine:
         elif str_token == "div":
             return BinaryFunction(func_name="Div", func_to_apply=div_to_zero)
         elif str_token == "i":
-            return UnaryFunction(function_name="Ident", numeric=False, function_to_apply=lambda x: x)
+            return UnaryFunction(
+                function_name="Ident", numeric=False, function_to_apply=lambda x: x
+            )
         elif str_token == "t":
             return func_t
         elif str_token == "f":
@@ -512,7 +517,9 @@ class Machine:
         elif str_token == "dec":
             return UnaryFunction(function_name="Dec", function_to_apply=lambda x: x - 1)
         elif str_token == "list_debug":
-            return UnaryFunction(function_name="ListDebug", numeric=False, function_to_apply=comb_debug)
+            return UnaryFunction(
+                function_name="ListDebug", numeric=False, function_to_apply=comb_debug
+            )
 
         if str_token not in self.definitions:
             self.not_found_list.add(str_token)
@@ -576,7 +583,7 @@ class TestMachine(unittest.TestCase):
         self.assertEqual("Cons()", str(m.eval(":2")))
 
     def test_eq(self):
-        m = Machine.from_lines([":1 = ap ap eq 1 2", ":2 = ap ap eq 777 777", ])
+        m = Machine.from_lines([":1 = ap ap eq 1 2", ":2 = ap ap eq 777 777",])
 
         self.assertEqual("FuncF()", str(m.eval(":1")))
         self.assertEqual("FuncT()", str(m.eval(":2")))
@@ -593,7 +600,7 @@ class TestMachine(unittest.TestCase):
         self.assertEqual("Car()", str(m.eval(":2")))
 
     def test_true_false(self):
-        m = Machine.from_lines([":1 = ap ap t car cons", ":2 = ap ap f car cons", ])
+        m = Machine.from_lines([":1 = ap ap t car cons", ":2 = ap ap f car cons",])
 
         self.assertEqual("Car()", str(m.eval(":1")))
         self.assertEqual("Cons()", str(m.eval(":2")))
@@ -649,7 +656,7 @@ class TestMachine(unittest.TestCase):
         self.assertEqual("FuncF()", str(m.eval(":1")))
 
     def test_identity_00(self):
-        m = Machine.from_lines([":1 = i 7"])
+        m = Machine.from_lines([":1 = ap i 7"])
 
         self.assertEqual("Number(7)", str(m.eval(":1")))
 
@@ -658,12 +665,13 @@ class TestMachine(unittest.TestCase):
 
         val = m.eval(":1")
 
-        with open('/home/tass/database/icfpc2020/checker', 'w') as fd:
-            simplejson.dump(val.value, fd)
+        # with open('/home/tass/database/icfpc2020/checker', 'w') as fd:
+        #     simplejson.dump(val.value, fd)
 
         self.assertEqual(
-            "Cons_2(func func func func atomic CombS() (func func atomic CombB() (atomic CombS()) (func func atomic CombB() (func atomic CombB() (atomic Cons())) (func atomic CombC() (atomic Div())))) (func atomic CombC() (func func atomic CombS() (func func atomic CombB() (atomic CombB()) (func func atomic CombC() (func func atomic CombB() (atomic CombB()) (atomic Add())) (atomic Neg()))) (func func atomic CombB() (func atomic CombS() (atomic Mul())) (atomic Div())))) (atomic Number(7)) (atomic Number(0)), func func func func atomic CombC() (func func atomic CombB() (atomic CombB()) (atomic StoredValue(checkerboard))) (func func atomic CombC() (atomic Add()) (atomic Number(2))) (atomic Number(7)) (atomic Number(0)))",
-            str(val))
+            "[[0, 0], [0, 2], [0, 4], [0, 6], [1, 1], [1, 3], [1, 5], [2, 0], [2, 2], [2, 4], [2, 6], [3, 1], [3, 3], [3, 5], [4, 0], [4, 2], [4, 4], [4, 6], [5, 1], [5, 3], [5, 5], [6, 0], [6, 2], [6, 4], [6, 6]]",
+            str(val),
+        )
 
 
 """
