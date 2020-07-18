@@ -1,30 +1,32 @@
 package interpreter
 
-import "fmt"
+import (
+	"log"
+)
 
 type Context interface {
-	GetVar(n int) (Program, error)
-	SetVar(n int, v Program)
+	GetVar(n int) Token
+	SetVar(n int, v Token)
 }
 
 type Ctx struct {
-	Vars map[int]Program
+	Vars map[int]Token
 }
 
 func NewContext() *Ctx {
 	return &Ctx{
-		Vars: make(map[int]Program),
+		Vars: make(map[int]Token),
 	}
 }
 
-func (c *Ctx) GetVar(n int) (Program, error) {
+func (c *Ctx) GetVar(n int) Token {
 	p, exists := c.Vars[n]
 	if !exists {
-		return nil, fmt.Errorf("Variable does not exist: %d", n)
+		log.Panicf("Variable does not exist: %d", n)
 	}
-	return p, nil
+	return p
 }
 
-func (c *Ctx) SetVar(n int, p Program) {
+func (c *Ctx) SetVar(n int, p Token) {
 	c.Vars[n] = p
 }
