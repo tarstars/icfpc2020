@@ -10,7 +10,7 @@ import (
 )
 
 func runProgram(t *testing.T, ts ...Token) Token {
-	c := NewContext()
+	c := NewContext(nil)
 	p := NewProgram(ts...)
 	tok, err := Interpret(c, p)
 	require.NoError(t, err, "Interpret failed")
@@ -83,7 +83,7 @@ func TestPwr2(t *testing.T) {
 }
 
 func TestParsePwr2(t *testing.T) {
-	c := NewContext()
+	c := NewContext(nil)
 	tok := ParseLine(c, ":42 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b :42 ap add -1")
 	assert.Nil(t, tok)
 	tok = ParseLine(c, "ap :42 4")
@@ -91,7 +91,7 @@ func TestParsePwr2(t *testing.T) {
 }
 
 func TestParsePwr2Reader(t *testing.T) {
-	c := NewContext()
+	c := NewContext(nil)
 	text := `:42 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b :42 ap add -1
 ap :42 4`
 	tok := ParseReader(c, strings.NewReader(text))
@@ -173,14 +173,14 @@ func TestModulateInt(t *testing.T) {
 }
 
 func TestModulate(t *testing.T) {
-	c := NewContext()
+	c := NewContext(nil)
 	assert.Equal(t, "00", mod(c, Nil{}))
 	assert.Equal(t, "110000", mod(c, Cons2{X0: Nil{}, X1: Nil{}}))
 	assert.Equal(t, "110110000101100010", mod(c, Cons2{X0: Int{V: 1}, X1: Int{V: 2}}))
 }
 
 func TestDemodulate(t *testing.T) {
-	c := NewContext()
+	c := NewContext(nil)
 	v, s := demod("00")
 	assert.Equal(t, "00", mod(c, v))
 	assert.Len(t, s, 0)

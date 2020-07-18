@@ -532,18 +532,35 @@ func (t Demodulate1) String() string {
 }
 
 type Send struct{}
+type Send1 struct {
+	X0 Token
+}
+
+func (t Send) Apply(v Token) Token {
+	return Send1{X0: v}
+}
+
+func (t Send1) Eval(c Context) Token {
+	x0 := t.X0.Eval(c)
+	rm := c.Send(mod(c, x0))
+	r, s := demod(rm)
+	if len(s) > 0 {
+		log.Panicf("Extra tail on demod %#v = %#v", rm, s)
+	}
+	// log.Printf("%s => %s", t, r)
+	return r
+}
 
 func (t Send) Eval(c Context) Token {
 	return t
 }
 
-func (t Send) Apply(v Token) Token {
-	log.Panicf("%s not implemented", t)
-	return nil
-}
-
 func (t Send) String() string {
 	return "send"
+}
+
+func (t Send1) String() string {
+	return fmt.Sprintf("(send %s)", t.X0)
 }
 
 type Neg struct{}
