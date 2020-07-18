@@ -9,6 +9,7 @@ import (
 
 type Token interface {
 	Eval(c Context) Token
+	String() string
 }
 
 type Value interface {
@@ -569,6 +570,10 @@ func (t Neg) String() string {
 	return "neg"
 }
 
+func (t Neg1) String() string {
+	return fmt.Sprintf("(neg %s)", t.X0)
+}
+
 type S struct{}
 type S1 struct {
 	X0 Token
@@ -761,32 +766,60 @@ func (t B3) String() string {
 }
 
 type Pwr2 struct{}
+type Pwr21 struct {
+	X0 Token
+}
 
-func (t Pwr2) Eval(c Context) Token {
-	r := S2{
-		X0: C2{
-			X0: Eq1{
-				X0: Int{V: 0},
-			},
-			X1: Int{V: 1},
-		},
-		X1: B2{
-			X0: Mul1{
-				X0: Int{V: 2},
-			},
-			X1: B2{
-				X0: Pwr2{},
-				X1: Dec{},
-			},
-		},
-	}.Eval(c)
+func (t Pwr2) Apply(v Token) Token {
+	return Pwr21{X0: v}
+}
+
+func (t Pwr21) Eval(c Context) Token {
+	x0 := t.X0.Eval(c).(Int).V
+	r := Int{V: 1 << x0}
 	// log.Printf("%s => %s", t, r)
 	return r
+}
+
+func (t Pwr2) Eval(c Context) Token {
+	return t
 }
 
 func (t Pwr2) String() string {
 	return "pwr2"
 }
+
+func (t Pwr21) String() string {
+	return fmt.Sprintf("(pwr2 %s)", t.X0)
+}
+
+// type Pwr2 struct{}
+
+// func (t Pwr2) Eval(c Context) Token {
+// 	r := S2{
+// 		X0: C2{
+// 			X0: Eq1{
+// 				X0: Int{V: 0},
+// 			},
+// 			X1: Int{V: 1},
+// 		},
+// 		X1: B2{
+// 			X0: Mul1{
+// 				X0: Int{V: 2},
+// 			},
+// 			X1: B2{
+// 				X0: Pwr2{},
+// 				X1: Dec{},
+// 			},
+// 		},
+// 	}.Eval(c)
+// 	// log.Printf("%s => %s", t, r)
+// 	return r
+// }
+
+// func (t Pwr2) String() string {
+// 	return "pwr2"
+// }
 
 type I struct{}
 type I1 struct {

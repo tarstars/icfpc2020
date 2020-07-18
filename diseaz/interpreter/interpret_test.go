@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"log"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,6 +80,22 @@ func TestPwr2(t *testing.T) {
 	testProgram(t, Int{V: 16},
 		Ap{}, Pwr2{}, Int{V: 4},
 	)
+}
+
+func TestParsePwr2(t *testing.T) {
+	c := NewContext()
+	tok := ParseLine(c, ":42 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b :42 ap add -1")
+	assert.Nil(t, tok)
+	tok = ParseLine(c, "ap :42 4")
+	assert.Equal(t, Int{V: 16}, tok)
+}
+
+func TestParsePwr2Reader(t *testing.T) {
+	c := NewContext()
+	text := `:42 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b :42 ap add -1
+ap :42 4`
+	tok := ParseReader(c, strings.NewReader(text))
+	assert.Equal(t, Int{V: 16}, tok)
 }
 
 func TestI(t *testing.T) {
