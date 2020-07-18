@@ -2,17 +2,17 @@ package interpreter
 
 import (
 	"log"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func runProgram(t *testing.T, ts ...Token) Token {
 	c := NewContext()
 	p := NewProgram(ts...)
 	tok, err := Interpret(c, p)
-	if err != nil {
-		t.Fatalf("Interpret failed: %s", err)
-	}
+	require.NoError(t, err, "Interpret failed")
 	log.Printf("Program: %s", tok)
 	r := tok.Eval(c)
 	return r
@@ -20,9 +20,7 @@ func runProgram(t *testing.T, ts ...Token) Token {
 
 func testProgram(t *testing.T, expected Token, ts ...Token) Token {
 	r := runProgram(t, ts...)
-	if !reflect.DeepEqual(r, expected) {
-		t.Errorf("Result does not match: %s != %s", expected, r)
-	}
+	assert.Equal(t, expected, r)
 	return r
 }
 
@@ -117,7 +115,7 @@ func TestIsNotNil(t *testing.T) {
 }
 
 func TestDraw(t *testing.T) {
-	testProgram(t, Points{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}},
+	testProgram(t, Picture{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}},
 		Ap{}, Draw{},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 1}, Int{V: 2},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 41}, Int{V: 42},
@@ -126,7 +124,7 @@ func TestDraw(t *testing.T) {
 }
 
 func TestMultipledraw(t *testing.T) {
-	testProgram(t, Points{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}, Point{X: 3, Y: 4}},
+	testProgram(t, Picture{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}, Point{X: 3, Y: 4}},
 		Ap{}, Multipledraw{},
 		Ap{}, Ap{}, Cons{},
 		// (
@@ -138,5 +136,58 @@ func TestMultipledraw(t *testing.T) {
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 3}, Int{V: 4},
 		Nil{},
 		Nil{},
+	)
+}
+
+func TestIf0(t *testing.T) {
+	testProgram(t, Add2{X0: Int{V: 1}, X1: Int{V: 41}},
+		Ap{}, Ap{}, Ap{}, If0{},
+		Ap{}, Dec{}, Int{V: 1},
+		Ap{}, Ap{}, Add{}, Int{V: 1}, Int{V: 41},
+		Nil{},
+	)
+}
+
+func TestModulateInt(t *testing.T) {
+	assert.Equal(t, "010", modInt(0))
+	assert.Equal(t, "01100001", modInt(1))
+	assert.Equal(t, "10100001", modInt(-1))
+	assert.Equal(t, "0111000101010", modInt(42))
+}
+
+func TestModulate(t *testing.T) {
+	c := NewContext()
+	assert.Equal(t, "00", mod(c, Nil{}))
+	assert.Equal(t, "110000", mod(c, Cons2{X0: Nil{}, X1: Nil{}}))
+	assert.Equal(t, "110110000101100010", mod(c, Cons2{X0: Int{V: 1}, X1: Int{V: 2}}))
+}
+
+func TestDemodulate(t *testing.T) {
+	c := NewContext()
+	v, s := demod("00")
+	assert.Equal(t, "00", mod(c, v))
+	assert.Len(t, s, 0)
+
+	v, s = demod("110000")
+	assert.Equal(t, "110000", mod(c, v))
+	assert.Len(t, s, 0)
+
+	v, s = demod("110110000101100010")
+	assert.Equal(t, "110110000101100010", mod(c, v))
+	assert.Len(t, s, 0)
+}
+
+func TestModDemod(t *testing.T) {
+	testProgram(t, Signal{S: "00"},
+		Ap{}, Modulate{},
+		Ap{}, Demodulate{}, Signal{S: "00"},
+	)
+	testProgram(t, Signal{S: "110000"},
+		Ap{}, Modulate{},
+		Ap{}, Demodulate{}, Signal{S: "110000"},
+	)
+	testProgram(t, Signal{S: "110110000101100010"},
+		Ap{}, Modulate{},
+		Ap{}, Demodulate{}, Signal{S: "110110000101100010"},
 	)
 }

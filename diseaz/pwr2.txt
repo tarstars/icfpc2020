@@ -1,0 +1,27 @@
+pwr2 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b pwr2 ap add -1
+
+ap ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b pwr2 ap add -1 2
+
+(((s ((c (eq 0)) 1)) ((b (mul 2)) ((b pwr2) (add -1)))) 2)
+ -> ((s ((c (eq 0)) 1)) ((b (mul 2)) ((b pwr2) (add -1)))) = (s1[((c (eq 0)) 1)] ((b (mul 2)) ((b pwr2) (add -1)))) = (s2
+   -> (s ((c (eq 0)) 1)) = s1[((c (eq 0)) 1)]
+
+
+pwr2 = (s (c (eq 0) 1) (b (mul 2) (b pwr2 (add -1))))
+
+(s x0 x1 x2) == (((s x0) x1) x2)
+
+ap pwr2 2 = (s (c (eq 0) 1) (b (mul 2) (b pwr2 (add -1))) 2) =
+  = ((c (eq 0) 1 2) (b (mul 2) (b pwr2 (add -1)) 2))
+  = (((eq 0 2) 1) (b (mul 2) (b pwr2 (add -1)) 2))
+  = (f 1 (b (mul 2) (b pwr2 (add -1)) 2))
+  = (t 1 (b (mul 2) (b pwr2 (add -1)) 2))
+
+  (t1[1] (b (mul 2) (b pwr2 (add -1)) 2)) -> 1
+
+  (f1[1] (b (mul 2) (b pwr2 (add -1)) 2)) -> (b (mul 2) (b pwr2 (add -1)) 2)
+
+  = (b (mul 2) (b pwr2 (add -1)) 2)
+  = (mul 2 (pwr2 (add -1 2)))
+  = (mul 2 (pwr2 1))
+  = (mul 2 (s (c (eq 0) 1) (b (mul 2) (b pwr2 (add -1))) 1))

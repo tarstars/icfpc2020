@@ -373,34 +373,161 @@ func (t Lt2) String() string {
 	return fmt.Sprintf("(lt %s %s)", t.X0, t.X1)
 }
 
-type Modulate struct{}
+func mod(c Context, v Token) string {
+	switch tt := v.Eval(c).(type) {
+	case Int:
+		return modInt(tt.V)
+	case ICons:
+		return modCons(c, tt)
+	default:
+		log.Panicf("Invalid `modulate` argument: %s", v)
+	}
+	return "ERROR"
+}
 
-func (t Modulate) Eval(c Context) Token {
+func modInt(v int64) string {
+	if v == 0 {
+		return "010"
+	}
+	prefix := "01"
+	if v < 0 {
+		prefix = "10"
+		v = -v
+	}
+	rs := []string{prefix}
+	s := strconv.FormatInt(v, 2)
+	n := (len(s) + 3) / 4
+	rs = append(rs, strings.Repeat("1", n), "0")
+	m := (4 * n) - len(s)
+	if m > 0 {
+		rs = append(rs, strings.Repeat("0", m))
+	}
+	rs = append(rs, s)
+	return strings.Join(rs, "")
+}
+
+func modCons(c Context, v ICons) string {
+	if v.IsNil() {
+		return "00"
+	}
+	return "11" + mod(c, v.Car()) + mod(c, v.Cdr())
+}
+
+func demod(v string) (Token, string) {
+	if len(v) == 0 {
+		return nil, v
+	}
+	prefix, w := v[0:2], v[2:]
+	if prefix == "00" {
+		return Nil{}, w
+	}
+	if prefix == "11" {
+		car, w := demod(w)
+		cdr, w := demod(w)
+		return Cons2{X0: car, X1: cdr}, w
+	}
+	return demodInt(v)
+}
+
+func demodInt(v string) (Token, string) {
+	var negative bool
+	prefix, w := v[0:2], v[2:]
+	switch prefix {
+	case "01":
+		negative = false
+	case "10":
+		negative = true
+	default:
+		log.Panicf("Invalid modulated int prefix: %#v", v)
+	}
+	nlen := 0
+	for ; w[0] == '1'; w = w[1:] {
+		nlen += 4
+	}
+	w = w[1:]
+	if nlen == 0 {
+		return Int{V: 0}, w
+	}
+	num, w := w[:nlen], w[nlen:]
+	n, err := strconv.ParseInt(num, 2, 64)
+	if err != nil {
+		log.Panic(err)
+	}
+	if negative {
+		n = -n
+	}
+	return Int{V: n}, w
+}
+
+type Signal struct {
+	S string
+}
+
+func (t Signal) Eval(c Context) Token {
 	return t
 }
 
+func (t Signal) String() string {
+	return fmt.Sprintf("%#v", t.S)
+}
+
+type Modulate struct{}
+type Modulate1 struct {
+	X0 Token
+}
+
 func (t Modulate) Apply(v Token) Token {
-	log.Panicf("%s not implemented", t)
-	return nil
+	return Modulate1{X0: v}
+}
+
+func (t Modulate1) Eval(c Context) Token {
+	x0 := t.X0.Eval(c)
+	r := Signal{S: mod(c, x0)}
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t Modulate) Eval(c Context) Token {
+	return t
 }
 
 func (t Modulate) String() string {
 	return "mod"
 }
 
+func (t Modulate1) String() string {
+	return fmt.Sprintf("(mod %s)", t.X0)
+}
+
 type Demodulate struct{}
+type Demodulate1 struct {
+	X0 Token
+}
+
+func (t Demodulate) Apply(v Token) Token {
+	return Demodulate1{X0: v}
+}
+
+func (t Demodulate1) Eval(c Context) Token {
+	x0 := t.X0.Eval(c).(Signal).S
+	r, s := demod(x0)
+	if len(s) > 0 {
+		log.Panicf("Invalid signal: %s", x0)
+	}
+	// log.Printf("%s => %s", t, r)
+	return r
+}
 
 func (t Demodulate) Eval(c Context) Token {
 	return t
 }
 
-func (t Demodulate) Apply(v Token) Token {
-	log.Panicf("%s not implemented", t)
-	return nil
-}
-
 func (t Demodulate) String() string {
 	return "dem"
+}
+
+func (t Demodulate1) String() string {
+	return fmt.Sprintf("(dem %s)", t.X0)
 }
 
 type Send struct{}
@@ -1010,13 +1137,13 @@ func (p Point) String() string {
 	return fmt.Sprintf("(%d, %d)", p.X, p.Y)
 }
 
-type Points []Point
+type Picture []Point
 
-func (ps Points) Eval(c Context) Token {
+func (ps Picture) Eval(c Context) Token {
 	return ps
 }
 
-func (ps Points) String() string {
+func (ps Picture) String() string {
 	var pp []string
 	for _, p := range ps {
 		pp = append(pp, p.String())
@@ -1025,13 +1152,14 @@ func (ps Points) String() string {
 }
 
 type ICons interface {
+	Token
 	Car() Token
 	Cdr() Token
 	IsNil() bool
 }
 
-func ListPoints(c Context, v Token) Points {
-	var r Points
+func ListPoints(c Context, v Token) Picture {
+	var r Picture
 	for i := v.(ICons); !i.IsNil(); i = i.Cdr().Eval(c).(ICons) {
 		p := i.Car().Eval(c).(ICons)
 		x := p.Car().Eval(c).(Int).V
@@ -1041,7 +1169,7 @@ func ListPoints(c Context, v Token) Points {
 	return r
 }
 
-func DrawPoints(c Context, v Token) Points {
+func DrawPoints(c Context, v Token) Picture {
 	ps := ListPoints(c, v.Eval(c))
 	log.Printf("Draw %s", ps)
 	return ps
@@ -1097,7 +1225,7 @@ func (t Multipledraw) Apply(v Token) Token {
 }
 
 func (t Multipledraw1) Eval(c Context) Token {
-	var r Points
+	var r Picture
 	v := t.X0.Eval(c)
 	for i := v.(ICons); !i.IsNil(); i = i.Cdr().Eval(c).(ICons) {
 		r = append(r, DrawPoints(c, i.Car())...)
@@ -1115,4 +1243,69 @@ func (t Multipledraw) String() string {
 
 func (t Multipledraw1) String() string {
 	return fmt.Sprintf("(multipledraw %s)", t.X0)
+}
+
+type If0 struct{}
+type If01 struct {
+	X0 Token
+}
+type If02 struct {
+	X0 Token
+	X1 Token
+}
+type If03 struct {
+	X0 Token
+	X1 Token
+	X2 Token
+}
+
+func (t If0) Apply(v Token) Token {
+	return If01{X0: v}
+}
+
+func (t If01) Apply(v Token) Token {
+	return If02{X0: t.X0, X1: v}
+}
+
+func (t If02) Apply(v Token) Token {
+	return If03{X0: t.X0, X1: t.X1, X2: v}
+}
+
+func (t If03) Eval(c Context) Token {
+	x0 := t.X0.Eval(c).(Int).V
+	r := t.X2
+	if x0 == 0 {
+		r = t.X1
+	}
+	// r = r.Eval(c)
+	// log.Printf("%s => %s", t, r)
+	return r
+}
+
+func (t If0) Eval(c Context) Token {
+	return t
+}
+
+func (t If01) Eval(c Context) Token {
+	return t
+}
+
+func (t If02) Eval(c Context) Token {
+	return t
+}
+
+func (t If0) String() string {
+	return "if0"
+}
+
+func (t If01) String() string {
+	return fmt.Sprintf("(if0 %s)", t.X0)
+}
+
+func (t If02) String() string {
+	return fmt.Sprintf("(if0 %s %s)", t.X0, t.X1)
+}
+
+func (t If03) String() string {
+	return fmt.Sprintf("(if0 %s %s %s)", t.X0, t.X1, t.X2)
 }
