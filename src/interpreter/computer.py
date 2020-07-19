@@ -1,11 +1,9 @@
 import logging
 import unittest
 import sys
-from collections import deque
-from typing import List
+from typing import List, Optional
 
 import requests
-import simplejson
 
 sys.setrecursionlimit(100000)
 
@@ -13,24 +11,6 @@ sys.setrecursionlimit(100000)
 class Ap:
     def __repr__(self):
         return "ap"
-
-
-class Cons:
-    def __init__(self):
-        self.a1 = None
-        self.a2 = None
-
-    def __repr__(self):
-        return f"Cons({self.a1}, {self.a2})"
-
-    def apply(self, arg):
-        if self.a1 is None:
-            self.a1 = arg
-            return [self]
-        if self.a2 is None:
-            self.a2 = arg
-            return [self]
-        return [Ap(), Ap(), arg, self.a1, self.a2]
 
 
 class Number:
@@ -53,7 +33,7 @@ class Nil:
 
 
 class StoredValue:
-    def __init__(self, vid: str, machine: "Machine"):
+    def __init__(self, vid: str, machine: Optional["Machine"]):
         self.vid = vid
         self.machine = machine
 
@@ -65,62 +45,6 @@ class StoredValue:
 
     def expand(self):
         return self.machine.definitions[self.vid]
-
-
-class IsNil:
-    def __repr__(self):
-        return "IsNil()"
-
-    def apply(self, val):
-        if isinstance(val, Nil):
-            return [FunT()]
-        return [FunF()]
-
-
-class FunT:
-    def __init__(self):
-        self.a1 = None
-
-    def __repr__(self):
-        return f"FunT({self.a1})"
-
-    def apply(self, val):
-        if self.a1 is None:
-            self.a1 = val
-            return [self]
-
-        return [self.a1]
-
-
-class FunF:
-    def __init__(self):
-        self.a1 = None
-
-    def __repr__(self):
-        return f"FunF({self.a1})"
-
-    def apply(self, val):
-        if self.a1 is None:
-            self.a1 = val
-            return [self]
-
-        return [val]
-
-
-class Car:
-    def __repr__(self):
-        return "Car()"
-
-    def apply(self, val):
-        return [Ap(), val, FunT()]
-
-
-class Cdr:
-    def __repr__(self):
-        return "Cdr()"
-
-    def apply(self, val):
-        return [Ap(), val, FunF()]
 
 
 def encode_number(a):
@@ -197,6 +121,27 @@ class BinaryFunction:
         return self
 
 
+class UnaryFunction:
+    def __init__(self, function_name, function_to_apply, numeric=True):
+        self.function_name = function_name
+        self.function_to_apply = function_to_apply
+        self.numeric = numeric
+
+    def __repr__(self):
+        return f"{self.function_name}()"
+
+    def apply(self, val):
+        if self.numeric:
+            result = val.eval()
+            if not isinstance(result, Number):
+                raise ValueError(f"not number in eq for {self.function_name}")
+            return Number(self.function_to_apply(result.val))
+        return self.function_to_apply(val).eval()
+
+    def eval(self):
+        return self
+
+
 class BinaryFunction1:
     def __init__(self, func_name, func_to_apply, val, numerical_function):
         self.x1 = val
@@ -261,27 +206,6 @@ class TernaryFunction2:
         arg3 = val
 
         return self.func_to_apply(arg1, arg2, arg3).eval()
-
-
-class UnaryFunction:
-    def __init__(self, function_name, function_to_apply, numeric=True):
-        self.function_name = function_name
-        self.function_to_apply = function_to_apply
-        self.numeric = numeric
-
-    def __repr__(self):
-        return f"{self.function_name}()"
-
-    def apply(self, val):
-        if self.numeric:
-            result = val.eval()
-            if not isinstance(result, Number):
-                raise ValueError(f"not number in eq for {self.function_name}")
-            return Number(self.function_to_apply(result.val))
-        return self.function_to_apply(val).eval()
-
-    def eval(self):
-        return self
 
 
 def sign(x: int):
@@ -532,7 +456,6 @@ def get_func_f38(definitions_dict):
         f38_helper = definitions_dict["f38_helper"]
         new_tokens = [substitute_token(token, x0, x1) for token in f38_helper]
         return Evaluable.from_tokens_list(new_tokens)[0]
-
     return func_f38
 
 
@@ -547,7 +470,6 @@ def get_func_interact(f38):
         """
         ap = Evaluable.from_function
         return ap(ap(f38, x2), ap(ap(x2, x4), x3))
-
     return func_interact
 
 
@@ -681,15 +603,6 @@ class Machine:
 
 class CanNotPerformProgram(BaseException):
     pass
-
-
-def main():
-    logging.basicConfig(level=logging.INFO)
-    with open("/home/tass/database/icfpc2020/messages/galaxy.txt") as fd:
-        all_lines = [line.strip() for line in fd.readlines()]
-        machine = Machine.from_lines(all_lines)
-        ans = machine.eval("ap list_debug ap ap ap interact galaxy nil ap ap cons 0 0")
-        print(ans)
 
 
 class TestMachine(unittest.TestCase):
@@ -832,4 +745,4 @@ ap inc ap dec 111
 """
 
 if __name__ == "__main__":
-    main()
+    unittest.main()
