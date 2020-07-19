@@ -617,11 +617,12 @@ func (t S2) Apply(v Token) Token {
 
 func (t S3) Eval(c Context) (Token, bool) {
 	f0 := TailEval(c, t.X0).(Func)
-	f1 := TailEval(c, f0.Apply(t.X2)).(Func)
+	x2 := TailEval(c, t.X2)
+	f1 := TailEval(c, f0.Apply(x2)).(Func)
 	r := f1.Apply(
 		Ap2{
 			F: t.X1,
-			A: t.X2,
+			A: x2,
 		},
 	)
 	// log.Printf("%s => %s", t, r)

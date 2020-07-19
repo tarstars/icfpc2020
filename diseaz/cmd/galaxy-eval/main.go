@@ -38,6 +38,7 @@ func main() {
 	values.Add("apiKey", *key)
 	serverURL.RawQuery = values.Encode()
 	log.Printf("ServerUrl: %s", serverURL)
+
 	c := interpreter.NewContext(serverURL)
 
 	fn := flag.Arg(0)
