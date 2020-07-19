@@ -9,6 +9,7 @@ import (
 
 type Token interface {
 	Eval(c Context) Token
+	String() string
 }
 
 type Value interface {
@@ -531,18 +532,35 @@ func (t Demodulate1) String() string {
 }
 
 type Send struct{}
+type Send1 struct {
+	X0 Token
+}
+
+func (t Send) Apply(v Token) Token {
+	return Send1{X0: v}
+}
+
+func (t Send1) Eval(c Context) Token {
+	x0 := t.X0.Eval(c)
+	rm := c.Send(mod(c, x0))
+	r, s := demod(rm)
+	if len(s) > 0 {
+		log.Panicf("Extra tail on demod %#v = %#v", rm, s)
+	}
+	// log.Printf("%s => %s", t, r)
+	return r
+}
 
 func (t Send) Eval(c Context) Token {
 	return t
 }
 
-func (t Send) Apply(v Token) Token {
-	log.Panicf("%s not implemented", t)
-	return nil
-}
-
 func (t Send) String() string {
 	return "send"
+}
+
+func (t Send1) String() string {
+	return fmt.Sprintf("(send %s)", t.X0)
 }
 
 type Neg struct{}
@@ -567,6 +585,10 @@ func (t Neg1) Eval(c Context) Token {
 
 func (t Neg) String() string {
 	return "neg"
+}
+
+func (t Neg1) String() string {
+	return fmt.Sprintf("(neg %s)", t.X0)
 }
 
 type S struct{}
@@ -761,32 +783,60 @@ func (t B3) String() string {
 }
 
 type Pwr2 struct{}
+type Pwr21 struct {
+	X0 Token
+}
 
-func (t Pwr2) Eval(c Context) Token {
-	r := S2{
-		X0: C2{
-			X0: Eq1{
-				X0: Int{V: 0},
-			},
-			X1: Int{V: 1},
-		},
-		X1: B2{
-			X0: Mul1{
-				X0: Int{V: 2},
-			},
-			X1: B2{
-				X0: Pwr2{},
-				X1: Dec{},
-			},
-		},
-	}.Eval(c)
+func (t Pwr2) Apply(v Token) Token {
+	return Pwr21{X0: v}
+}
+
+func (t Pwr21) Eval(c Context) Token {
+	x0 := t.X0.Eval(c).(Int).V
+	r := Int{V: 1 << x0}
 	// log.Printf("%s => %s", t, r)
 	return r
+}
+
+func (t Pwr2) Eval(c Context) Token {
+	return t
 }
 
 func (t Pwr2) String() string {
 	return "pwr2"
 }
+
+func (t Pwr21) String() string {
+	return fmt.Sprintf("(pwr2 %s)", t.X0)
+}
+
+// type Pwr2 struct{}
+
+// func (t Pwr2) Eval(c Context) Token {
+// 	r := S2{
+// 		X0: C2{
+// 			X0: Eq1{
+// 				X0: Int{V: 0},
+// 			},
+// 			X1: Int{V: 1},
+// 		},
+// 		X1: B2{
+// 			X0: Mul1{
+// 				X0: Int{V: 2},
+// 			},
+// 			X1: B2{
+// 				X0: Pwr2{},
+// 				X1: Dec{},
+// 			},
+// 		},
+// 	}.Eval(c)
+// 	// log.Printf("%s => %s", t, r)
+// 	return r
+// }
+
+// func (t Pwr2) String() string {
+// 	return "pwr2"
+// }
 
 type I struct{}
 type I1 struct {
