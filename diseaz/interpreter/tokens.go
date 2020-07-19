@@ -1158,29 +1158,6 @@ func (t IsNil1) String() string {
 	return fmt.Sprintf("(isnil %s)", t.X0)
 }
 
-type Point struct {
-	X int64
-	Y int64
-}
-
-func (p Point) String() string {
-	return fmt.Sprintf("[%d, %d]", p.X, p.Y)
-}
-
-type Picture []Point
-
-func (ps Picture) Eval(c Context) (Token, bool) {
-	return ps, false
-}
-
-func (ps Picture) String() string {
-	var pp []string
-	for _, p := range ps {
-		pp = append(pp, p.String())
-	}
-	return "[" + strings.Join(pp, " ") + "]"
-}
-
 type ICons interface {
 	Token
 	Car() Token
@@ -1188,21 +1165,29 @@ type ICons interface {
 	IsNil() bool
 }
 
-func ListPoints(c Context, v Token) Picture {
-	var r Picture
-	for i := v.(ICons); !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
-		p := TailEval(c, i.Car()).(ICons)
-		x := TailEval(c, p.Car()).(Int).V
-		y := TailEval(c, p.Cdr()).(Int).V
-		r = append(r, Point{X: x, Y: y})
-	}
-	return r
-}
+// func ListPoints(c Context, v Token) Picture {
+// 	var r Picture
+// 	for i := v.(ICons); !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
+// 		p := TailEval(c, i.Car()).(ICons)
+// 		x := TailEval(c, p.Car()).(Int).V
+// 		y := TailEval(c, p.Cdr()).(Int).V
+// 		r = append(r, Point{X: x, Y: y})
+// 	}
+// 	return r
+// }
 
 func DrawPoints(c Context, v Token) Picture {
-	ps := ListPoints(c, TailEval(c, v))
-	log.Printf("Draw %s", ps)
-	return ps
+	pic := c.Picture()
+	r := Picture{}
+	for i := TailEval(c, v).(ICons); !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
+		p := TailEval(c, i.Car()).(ICons)
+		x := int(TailEval(c, p.Car()).(Int).V)
+		y := int(TailEval(c, p.Cdr()).(Int).V)
+		pic.Draw(x, y)
+		r.Draw(x, y)
+	}
+	log.Printf("Draw %s", r)
+	return r
 }
 
 type Draw struct{}
@@ -1255,11 +1240,10 @@ func (t Multipledraw) Apply(v Token) Token {
 }
 
 func (t Multipledraw1) Eval(c Context) (Token, bool) {
-	log.Printf("Eval: (multipledraw %s)", t.X0)
-	var r Picture
+	r := Picture{}
 	v := TailEval(c, t.X0).(ICons)
 	for i := v; !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
-		r = append(r, DrawPoints(c, i.Car())...)
+		r.DrawPicture(DrawPoints(c, i.Car()))
 	}
 	return r, false
 }

@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"image"
 	"strings"
 	"testing"
 
@@ -131,7 +132,7 @@ func TestIsNotNil(t *testing.T) {
 }
 
 func TestDraw(t *testing.T) {
-	testProgram(t, Picture{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}},
+	testProgram(t, Picture{image.Point{X: 1, Y: 2}: true, image.Point{X: 41, Y: 42}: true},
 		Ap{}, Draw{},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 1}, Int{V: 2},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 41}, Int{V: 42},
@@ -143,11 +144,11 @@ func TestDrawListCons(t *testing.T) {
 	c := NewContext(nil)
 	text := "ap draw (ap ap vec 1 2, ap ap vec 41 42)"
 	tok := ParseReader(c, strings.NewReader(text))
-	assert.Equal(t, Picture{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}}, tok)
+	assert.Equal(t, Picture{image.Point{X: 1, Y: 2}: true, image.Point{X: 41, Y: 42}: true}, tok)
 }
 
 func TestMultipledraw(t *testing.T) {
-	testProgram(t, Picture{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}, Point{X: 3, Y: 4}},
+	testProgram(t, Picture{image.Point{X: 1, Y: 2}: true, image.Point{X: 41, Y: 42}: true, image.Point{X: 3, Y: 4}: true},
 		Ap{}, Multipledraw{},
 		Ap{}, Ap{}, Cons{},
 		// (

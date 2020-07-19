@@ -117,7 +117,7 @@ func splitOn(toks []string, sep string) []string {
 	return r
 }
 
-func ParseLine(c Context, s string) Token {
+func ParseLine(c Context, s string) []Token {
 	toks := strings.Fields(s)
 	if len(toks) == 0 || IsComment(toks[0]) {
 		return nil
@@ -141,16 +141,16 @@ func ParseLine(c Context, s string) Token {
 
 	r := TailEval(c, tok)
 	// log.Printf("%s => %s", tok, r)
-	return r
+	return []Token{r}
 }
 
-func ParseReader(c Context, rd io.Reader) Token {
+func ParseReader(c Context, rd io.Reader) []Token {
 	lrd := bufio.NewReader(rd)
-	var r Token
+	var rs []Token
 	for line, err := lrd.ReadString('\n'); err != io.EOF || len(line) > 0; line, err = lrd.ReadString('\n') {
-		r = ParseLine(c, line)
+		rs = append(rs, ParseLine(c, line)...)
 	}
-	return r
+	return rs
 }
 
 var tokenMap = makeTokenMap(

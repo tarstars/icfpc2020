@@ -393,7 +393,7 @@
 # galaxy = :1338
 
 # Galaxy initial run
-# ap ap ap interact :1338 nil ap ap vec 0 0
+ap ap ap interact :1338 nil ap ap vec 0 0
 
 # (cons2 0 (cons2 (cons2 0 nil) (cons2 0 (cons2 nil nil))))
-ap ap ap interact :1338 ap ap cons 0 ap ap cons ap ap cons 0 nil ap ap cons 0 ap ap cons nil nil ap ap vec 0 0
+#ap ap ap interact :1338 ap ap cons 0 ap ap cons ap ap cons 0 nil ap ap cons 0 ap ap cons nil nil ap ap vec 0 0
