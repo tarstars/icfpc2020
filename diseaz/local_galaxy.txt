@@ -417,3 +417,5 @@
 
 # galaxy-big.png
 #ap car ap ap ap interact :1338 ap ap cons 1 ap ap cons ap ap cons 11 nil ap ap cons 0 ap ap cons nil nil ap ap vec 0 4
+
+ap car ap ap ap interact :1338 ap ap cons 3 ap ap cons ap ap cons 0 ap ap cons ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 nil ap ap cons ap ap cons 6860065 ap ap cons 7566001 ap ap cons 12493153 nil ap ap cons 0 nil ap ap cons 0 ap ap cons nil nil ap ap vec 1 -6

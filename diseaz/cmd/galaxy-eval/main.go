@@ -32,7 +32,7 @@ type Result struct {
 
 func main() {
 	server := flag.String("server", "https://icfpc2020-api.testkontur.ru/aliens/send", "Server URL")
-	key := flag.String("key", "", "Player key")
+	key := flag.String("key", "faa0647bb89f42d6a0a1850cf1b71954", "Player key")
 	drawOut := flag.String("draw", "", "Output picture file")
 	flag.Parse()
 
@@ -47,23 +47,24 @@ func main() {
 
 	c := interpreter.NewContext(serverURL)
 
-	fn := flag.Arg(0)
-	f, err := os.Open(fn)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer f.Close()
+	r := Result{}
+	for _, fn := range flag.Args() {
+		f, err := os.Open(fn)
+		if err != nil {
+			log.Panic(err)
+		}
+		defer f.Close()
 
-	toks := interpreter.ParseReader(c, f)
-	r := Result{
-		Picture: c.Picture(),
-	}
-	for _, tok := range toks {
-		r.Results = append(r.Results, tok.Galaxy())
-		log.Printf("Result: %s", tok.Galaxy())
+		toks := interpreter.ParseReader(c, f)
+		for _, tok := range toks {
+			r.Results = append(r.Results, tok.Galaxy())
+			log.Printf("Result(s): %s", tok)
+			log.Printf("Result: %s", tok.Galaxy())
+		}
 	}
 	log.Printf("Evals: %d", c.EvalCount)
 
+	r.Picture = c.Picture()
 	json.NewEncoder(os.Stdout).Encode(r)
 
 	if len(*drawOut) > 0 {

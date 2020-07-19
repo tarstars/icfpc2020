@@ -659,7 +659,7 @@ func (t Send1) Eval(c Context) (Token, bool) {
 	if len(s) > 0 {
 		log.Panicf("Extra tail on demod %#v = %#v", rm, s)
 	}
-	log.Printf("Receivd: %s", r)
+	log.Printf("Receivd: %s", r.Galaxy())
 	// log.Printf("%s => %s", t, r)
 	return r, false
 }

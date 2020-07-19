@@ -1,0 +1,3 @@
+# Create (as attacker)
+# Result: attacker player key
+:1 = ap car ap cdr ap car ap car ap cdr ap send (1, 0)
