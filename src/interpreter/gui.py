@@ -7,7 +7,7 @@ from PyQt5.QtCore import QRunnable, QThreadPool
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow
 
-from main import Machine
+from computer import Machine
 
 
 class Worker(QRunnable):
