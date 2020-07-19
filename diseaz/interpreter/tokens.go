@@ -1458,7 +1458,7 @@ func DrawPoints(c Context, v Token) *Picture {
 	}
 	c.Picture().DrawPts(pts...)
 	r.DrawPts(pts...)
-	log.Printf("Draw %s", r)
+	// log.Printf("Draw %s", r)
 	return r
 }
 

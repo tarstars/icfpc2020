@@ -21,16 +21,30 @@ var (
 		B: 0,
 		A: 0xff,
 	}
+	Palette = color.Palette{
+		rgba(0xff, 0xff, 0xff, 0x80),
+		rgba(0, 0, 0xff, 0x80),
+		rgba(0xff, 0, 0xff, 0x80),
+		rgba(0, 0xff, 0xff, 0x80),
+		rgba(0, 0xff, 0, 0x80),
+		rgba(0xff, 0xff, 0, 0x80),
+		rgba(0xff, 0, 0, 0x80),
+		// rgba(0, 0, 0, 0x80),
+	}
 )
 
+func rgba(r, g, b, a uint8) color.RGBA {
+	return color.RGBA{R: r, G: g, B: b, A: a}
+}
+
 type Picture struct {
-	Pts  map[Point]bool `json:"-"`
-	Draw [][]Point      `json:""`
+	Pts  map[Point]int `json:"-"`
+	Draw [][]Point     `json:""`
 }
 
 func NewPicture(pts ...Point) *Picture {
 	pic := &Picture{
-		Pts: make(map[Point]bool),
+		Pts: make(map[Point]int),
 	}
 	if len(pts) > 0 {
 		pic.DrawPts(pts...)
@@ -60,10 +74,7 @@ func (pic Picture) Galaxy() string {
 
 func (pic Picture) Serial() []Point {
 	r := []Point{}
-	for p, v := range pic.Pts {
-		if !v {
-			continue
-		}
+	for p := range pic.Pts {
 		r = append(r, p)
 	}
 	sort.Slice(r, func(i, j int) bool {
@@ -77,12 +88,16 @@ func (pic *Picture) DrawPts(pts ...Point) *Picture {
 		pic.Draw = append(pic.Draw, []Point{})
 		return pic
 	}
+	color := len(pic.Draw)
 	// log.Printf("DrawPts(%p) %#v", pic, pts)
 	// log.Printf("  Picture[before] %s", pic)
 	// log.Printf("  Draw[before] %#v", pic.Draw)
 	pic.Draw = append(pic.Draw, pts)
 	for _, p := range pts {
-		pic.Pts[p] = true
+		if _, found := pic.Pts[p]; found {
+			continue
+		}
+		pic.Pts[p] = color
 	}
 	// log.Printf("  Picture[after] %s", pic)
 	// log.Printf("  Draw[after] %#v", pic.Draw)
@@ -94,12 +109,13 @@ func (pic *Picture) DrawPicture(other *Picture) {
 	// log.Printf("DrawPicture(%p) %s", pic, other)
 	// log.Printf("  Picture[before] %s", pic)
 	// log.Printf("  Draw[before] %#v", pic.Draw)
+	color := len(pic.Draw)
 	pic.Draw = append(pic.Draw, other.Draw...)
 	for p, v := range other.Pts {
-		if !v {
+		if _, found := pic.Pts[p]; found {
 			continue
 		}
-		pic.Pts[p] = true
+		pic.Pts[p] = v + color
 	}
 	// log.Printf("  Picture[after] %s", pic)
 	// log.Printf("  Draw[after] %#v", pic.Draw)
@@ -109,27 +125,32 @@ func (pic Picture) ColorModel() color.Model {
 	return color.RGBAModel
 }
 
+const box = 5
+
 func (pic Picture) Bounds() image.Rectangle {
 	var b *image.Rectangle
+	bx := image.Pt(box, box)
 	for p := range pic.Pts {
+		q := p.ToImg().Mul(box)
+		u := q.Add(bx)
 		if b == nil {
 			b = &image.Rectangle{
-				Min: p.ToImg(),
-				Max: p.ToImg().Add(image.Pt(1, 1)),
+				Min: q,
+				Max: u,
 			}
 			continue
 		}
-		if p.X < b.Min.X {
-			b.Min.X = p.X
+		if q.X < b.Min.X {
+			b.Min.X = q.X
 		}
-		if p.X+1 > b.Max.X {
-			b.Max.X = p.X + 1
+		if u.X > b.Max.X {
+			b.Max.X = u.X
 		}
-		if p.Y < b.Min.Y {
-			b.Min.Y = p.Y
+		if q.Y < b.Min.Y {
+			b.Min.Y = q.Y
 		}
-		if p.Y+1 > b.Max.Y {
-			b.Max.Y = p.Y + 1
+		if u.Y > b.Max.Y {
+			b.Max.Y = u.Y
 		}
 	}
 	if b == nil {
@@ -138,11 +159,19 @@ func (pic Picture) Bounds() image.Rectangle {
 	return *b
 }
 
-func (pic Picture) At(x, y int) color.Color {
-	if pic.Pts[Pt(x, y)] {
-		return White
+func fromBox(x int) int {
+	if x < 0 {
+		x = x - box + 1
 	}
-	return Black
+	return x / box
+}
+
+func (pic Picture) At(x, y int) color.Color {
+	colorIdx, found := pic.Pts[Pt(fromBox(x), fromBox(y))]
+	if !found {
+		return Black
+	}
+	return Palette[colorIdx]
 }
 
 type Point struct {

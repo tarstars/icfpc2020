@@ -60,7 +60,7 @@ func main() {
 	}
 	for _, tok := range toks {
 		r.Results = append(r.Results, tok.Galaxy())
-		log.Printf("Result: %s", tok)
+		log.Printf("Result: %s", tok.Galaxy())
 	}
 	log.Printf("Evals: %d", c.EvalCount)
 
