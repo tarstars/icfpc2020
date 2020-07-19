@@ -4,6 +4,7 @@ import sys
 from collections import deque
 from typing import List
 
+import requests
 import simplejson
 
 sys.setrecursionlimit(100000)
@@ -59,8 +60,8 @@ class StoredValue:
     def __repr__(self):
         return f"StoredValue({self.vid})"
 
-    def apply(self):
-        return self.expand().apply()
+    def apply(self, arg):
+        return self.expand().apply(arg)
 
     def expand(self):
         return self.machine.definitions[self.vid]
@@ -120,6 +121,59 @@ class Cdr:
 
     def apply(self, val):
         return [Ap(), val, FunF()]
+
+
+def encode_number(a):
+    sign = -1 if a < 0 else 1
+    mod_a = abs(a)
+    str_a = bin(mod_a)[2:] if mod_a > 0 else ''
+    sign_str = '01' if sign >= 0 else '10'
+    str_a = '0' * ((4 - (len(str_a) % 4)) % 4) + str_a
+    return sign_str + '1' * (len(str_a) // 4) + '0' + str_a
+
+
+def extract_number(a):
+    sign = 1
+    if a[:2] == '10':
+        sign = -1
+    a = a[2:]
+    num_ones = 0
+    while a[num_ones] == '1':
+        num_ones += 1
+    to_interpret = a[num_ones + 1: 5 * num_ones + 1] or '0'
+    val = int(to_interpret, 2)
+    return sign * val, 2 + 5 * num_ones + 1
+
+
+def encode_list(lst):
+    return '11' + '11'.join((encode_list(x) if isinstance(x, list) else encode_number(x)) for x in lst) + '00'
+
+
+def encode_list_func(lst):
+    if not lst:
+        return 'nil'
+    return 'ap ap cons ' + ' ap ap cons '.join(
+        (encode_list_func(x) if isinstance(x, list) else str(x)) for x in lst) + ' nil'
+
+
+def decode_list(a):
+    val, gobbled_chars = decode(a)
+    if a[gobbled_chars: gobbled_chars + 2] == '11':
+        new_val, new_gobbled_chars = decode_list(a[gobbled_chars + 2:])
+        return (val,) + new_val, gobbled_chars + new_gobbled_chars + 2
+    return (val,), gobbled_chars
+
+
+def decode(a):
+    if a[:2] in ['01', '10']:
+        return extract_number(a)
+
+    if a[:2] == '11':
+        val, gobbled = decode_list(a[2:])
+        if a[gobbled + 2: gobbled + 4] != '00':
+            raise ValueError('wrong sequence')
+        return val, gobbled + 4
+    return f"undecoded({a})"
 
 
 class BinaryFunction:
@@ -226,6 +280,9 @@ class UnaryFunction:
             return Number(self.function_to_apply(result.val))
         return self.function_to_apply(val).eval()
 
+    def eval(self):
+        return self
+
 
 def sign(x: int):
     return 1 if x >= 0 else -1
@@ -287,9 +344,9 @@ def comb_cons(a1, a2, a3):
 
 def comb_is_nil(arg):
     """
-    ap nil x0 = t
+    ap nil x1 = t
     ap isnil nil   =   t
-    ap isnil ap ap cons x0 x1   =   f
+    ap isnil ap ap cons x1 x1   =   f
 
     :param arg:
     :return:
@@ -297,6 +354,44 @@ def comb_is_nil(arg):
     val = arg.eval()
     cond = isinstance(val, UnaryFunction) and val.function_name == "Nil"
     return func_t if cond else func_f
+
+
+funct_cons = TernaryFunction(func_name="Cons", func_to_apply=comb_cons)
+
+
+def comb_draw(arg):
+    """ap multipledraw ap ap cons x0 x1   = ap ap cons ap draw x0 ap multipledraw x1
+
+    ap multipledraw nil   =   nil
+    :param arg:
+    :return:
+    """
+    return comb_debug(arg)
+
+
+def comb_multidraw(arg):
+    """ap multipledraw ap ap cons x0 x1   = ap ap cons ap draw x0 ap multipledraw x1
+
+    ap multipledraw nil   =   nil
+    :param arg:
+    :return:
+    """
+    val = arg.eval()
+    cond = isinstance(val, UnaryFunction) and val.function_name == "Nil"
+    if cond:
+        return val
+    assert is_cons(val)
+    ap = Evaluable.from_function
+    x0, x1 = val.x1, val.x2
+    return ap(ap(funct_cons, ap(funct_draw, x0)), ap(funct_multipledraw, x1))
+
+
+funct_multipledraw = UnaryFunction(
+    function_name="MultipleDraw", function_to_apply=comb_multidraw, numeric=False
+)
+funct_draw = UnaryFunction(
+    function_name="Draw", function_to_apply=comb_draw, numeric=False
+)
 
 
 def func_lt(a1, a2):
@@ -319,6 +414,17 @@ class DebugList:
         return self
 
 
+def comb_send(arg):
+    real_list = comb_debug(arg)
+    to_send = encode_list(real_list)
+    r = requests.post('https://icfpc2020-api.testkontur.ru/aliens/send',
+                      params={'apiKey': 'faa0647bb89f42d6a0a1850cf1b71954'},
+                      data=to_send)
+    real_answer = decode_list(r.text)
+    alien_list = encode_list_func(real_answer)
+    return Evaluable.from_tokens_list([external_tokens_factory(term) for term in alien_list.split()])[0]
+
+
 def comb_debug(val):
     val_eval = val.eval()
     if is_cons(val_eval):
@@ -328,14 +434,14 @@ def comb_debug(val):
         if rec_x2.is_cons:
             return DebugList([rec_x1.value] + rec_x2.value, True)
         else:
-            if rec_x2.value == "Nil":
+            if isinstance(rec_x2.value, list) and not rec_x2.value:
                 return DebugList([rec_x1.value], True)
             return DebugList([rec_x1.value, rec_x2.value], True)
     else:
         if isinstance(val_eval, Number):
             return DebugList(val_eval.val, False)
         if isinstance(val_eval, UnaryFunction) and val_eval.function_name == "Nil":
-            return DebugList("Nil", False)
+            return DebugList([], False)
         return DebugList(val_eval, False)
 
 
@@ -348,8 +454,8 @@ class Evaluable:
 
     def __init__(self, func, func_arg, atomic):
         if not (
-            ((func is not None) == (func_arg is not None))
-            and ((func is not None) != (atomic is not None))
+                ((func is not None) == (func_arg is not None))
+                and ((func is not None) != (atomic is not None))
         ):
             print()
         self.func = func
@@ -359,7 +465,7 @@ class Evaluable:
     def __repr__(self):
         if self.atomic is not None:
             return f"atomic {self.atomic}"
-        return f"func {self.func} ({self.func_arg})"
+        return f"f {self.func} ({self.func_arg})"
 
     @classmethod
     def from_function(cls, func, arg):
@@ -371,11 +477,14 @@ class Evaluable:
 
     @classmethod
     def from_tokens_list(cls, tokens: List):
+        if len(tokens) == 0:
+            raise IndexError('not enough tokens')
+
         if isinstance(tokens[0], Ap):
             func, gobbled_first = Evaluable.from_tokens_list(tokens[1:])
             assert func is not None
             func_arg, gobbled_second = Evaluable.from_tokens_list(
-                tokens[1 + gobbled_first :]
+                tokens[1 + gobbled_first:]
             )
             return (
                 Evaluable.from_function(func=func, arg=func_arg),
@@ -410,9 +519,99 @@ def div_to_zero(x, y):
     return sign(x) * sign(y) * (abs(x) // abs(y))
 
 
+def substitute_token(token, x0, x1):
+    if isinstance(token, StoredValue) and token.vid == 'x0':
+        return x0
+    if isinstance(token, StoredValue) and token.vid == 'x1':
+        return x1
+    return token
+
+
+def get_func_f38(definitions_dict):
+    def func_f38(x0, x1):
+        f38_helper = definitions_dict["f38_helper"]
+        new_tokens = [substitute_token(token, x0, x1) for token in f38_helper]
+        return Evaluable.from_tokens_list(new_tokens)[0]
+
+    return func_f38
+
+
+def get_func_interact(f38):
+    def func_interact(x2, x4, x3):
+        """interact x2, x4, x3 = ap ap f38 x2 ap ap x2 x4 x3
+
+        :param x2:
+        :param x4:
+        :param x3:
+        :return:
+        """
+        ap = Evaluable.from_function
+        return ap(ap(f38, x2), ap(ap(x2, x4), x3))
+
+    return func_interact
+
+
+generic_tokens = {
+    "ap": Ap(),
+    "cons": funct_cons,
+    "nil": UnaryFunction(
+        function_name="Nil", numeric=False, function_to_apply=lambda x: func_t
+    ),
+    "neg": UnaryFunction(function_name="Neg", function_to_apply=lambda x: -x),
+    "c": TernaryFunction(func_name="CombC", func_to_apply=comb_c),
+    "b": TernaryFunction(func_name="CombB", func_to_apply=comb_b),
+    "s": TernaryFunction(func_name="CombS", func_to_apply=comb_s),
+    "isnil": UnaryFunction(
+        function_name="IsNil", function_to_apply=comb_is_nil, numeric=False
+    ),
+    "car": UnaryFunction(
+        function_name="Car", function_to_apply=comb_car, numeric=False
+    ),
+    "eq": BinaryFunction(
+        func_name="Eq",
+        numerical_function=False,
+        func_to_apply=lambda x, y: func_t
+        if x.eval().val == y.eval().val
+        else func_f,
+    ),
+    "mul": BinaryFunction(func_name="Mul", func_to_apply=lambda x, y: x * y),
+    "add": BinaryFunction(func_name="Add", func_to_apply=lambda x, y: x + y),
+    "lt": BinaryFunction(
+        func_name="Lt", func_to_apply=func_lt, numerical_function=False
+    ),
+    "div": BinaryFunction(func_name="Div", func_to_apply=div_to_zero),
+    "i": UnaryFunction(
+        function_name="Ident", numeric=False, function_to_apply=lambda x: x
+    ),
+    "t": func_t,
+    "f": func_f,
+    "cdr": UnaryFunction(
+        function_name="Cdr", function_to_apply=comb_cdr, numeric=False
+    ),
+    "inc": UnaryFunction(function_name="Inc", function_to_apply=lambda x: x + 1),
+    "dec": UnaryFunction(function_name="Dec", function_to_apply=lambda x: x - 1),
+    "list_debug": UnaryFunction(
+        function_name="ListDebug", numeric=False, function_to_apply=comb_debug
+    ),
+    "send": UnaryFunction(function_name="Send", function_to_apply=comb_send),
+    "multipledraw": funct_multipledraw,
+    "x0": StoredValue("x0", None),
+    "x1": StoredValue("x1", None),
+}
+
+
+def external_tokens_factory(str_token):
+    if str_token in generic_tokens:
+        return generic_tokens[str_token]
+    elif is_number(str_token=str_token):
+        return Number(int(str_token))
+    return NotImplemented
+
+
 class Machine:
-    def __init__(self, definitions):
+    def __init__(self, definitions, just_tokens):
         self.definitions = definitions
+        self.just_tokens = just_tokens
         self.not_found_list = set()
 
     def parse_line(self, str_operator):
@@ -427,16 +626,22 @@ class Machine:
     @classmethod
     def from_lines(cls, lines):
         definitions = {}
-        self = cls(definitions=definitions)
+        just_tokens = {}
+        self = cls(definitions=definitions, just_tokens=just_tokens)
         # "ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b pwr2 ap add -1"
         for one_line in lines + [
             "pwr2 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b pwr2 dec",
+            "modem = i",
+            "if0 = ap eq 0",
             "checkerboard = ap ap s ap ap b s ap ap c ap ap b c ap ap b ap c ap c ap ap s ap ap b s ap ap b ap b ap ap s i i lt eq ap ap s mul i nil ap ap s ap ap b s ap ap b ap b cons ap ap s ap ap b s ap ap b ap b cons ap c div ap c ap ap s ap ap b b ap ap c ap ap b b add neg ap ap b ap s mul div ap ap c ap ap b b checkerboard ap ap c add 2",
         ]:
             new_id, str_operator = map(lambda x: x.strip(), one_line.split("="))
             definitions[new_id] = self.from_str_operator(str_operator=str_operator)
             if new_id in self.not_found_list:
                 self.not_found_list.remove(new_id)
+        just_tokens["f38_helper"] = self.parse_line(
+            "ap ap ap if0 ap car x1 ap ap cons ap modem ap car ap cdr x1 ap ap cons ap multipledraw ap car ap cdr ap cdr x1 nil ap ap ap interact x0 ap modem ap car ap cdr x1 ap send ap car ap cdr ap cdr x1")
+
         if self.not_found_list:
             raise ValueError("Not found: " + ",".join(self.not_found_list))
         return self
@@ -456,72 +661,19 @@ class Machine:
         return self.definitions[item]
 
     def tokens_factory(self, str_token):
-        if str_token == "ap":
-            return Ap()
-        elif str_token == "cons":
-            return TernaryFunction(func_name="Cons", func_to_apply=comb_cons)
-        elif is_number(str_token=str_token):
-            return Number(int(str_token))
-        elif str_token == "nil":
-            return UnaryFunction(
-                function_name="Nil", numeric=False, function_to_apply=lambda x: func_t
-            )
-        elif str_token == "neg":
-            return UnaryFunction(function_name="Neg", function_to_apply=lambda x: -x)
-        elif str_token == "c":
-            return TernaryFunction(func_name="CombC", func_to_apply=comb_c)
-        elif str_token == "b":
-            return TernaryFunction(func_name="CombB", func_to_apply=comb_b)
-        elif str_token == "s":
-            return TernaryFunction(func_name="CombS", func_to_apply=comb_s)
-        elif str_token == "isnil":
-            return UnaryFunction(
-                function_name="IsNil", function_to_apply=comb_is_nil, numeric=False
-            )
-        elif str_token == "car":
-            return UnaryFunction(
-                function_name="Car", function_to_apply=comb_car, numeric=False
-            )
-        elif str_token == "eq":
+        cand = external_tokens_factory(str_token=str_token)
+        if cand is not NotImplemented:
+            return cand
+        elif str_token == "f38":
             return BinaryFunction(
-                func_name="Eq",
-                numerical_function=False,
-                func_to_apply=lambda x, y: func_t
-                if x.eval().val == y.eval().val
-                else func_f,
+                func_name="f38", func_to_apply=get_func_f38(self.just_tokens), numerical_function=False
             )
-        elif str_token == "mul":
-            return BinaryFunction(func_name="Mul", func_to_apply=lambda x, y: x * y)
-        elif str_token == "add":
-            return BinaryFunction(func_name="Add", func_to_apply=lambda x, y: x + y)
-        elif str_token == "lt":
-            return BinaryFunction(
-                func_name="Lt", func_to_apply=func_lt, numerical_function=False
-            )
-        elif str_token == "div":
-            return BinaryFunction(func_name="Div", func_to_apply=div_to_zero)
-        elif str_token == "i":
-            return UnaryFunction(
-                function_name="Ident", numeric=False, function_to_apply=lambda x: x
-            )
-        elif str_token == "t":
-            return func_t
-        elif str_token == "f":
-            return func_f
-        elif str_token == "cdr":
-            return UnaryFunction(
-                function_name="Cdr", function_to_apply=comb_cdr, numeric=False
-            )
-        elif str_token == "inc":
-            return UnaryFunction(function_name="Inc", function_to_apply=lambda x: x + 1)
-        elif str_token == "dec":
-            return UnaryFunction(function_name="Dec", function_to_apply=lambda x: x - 1)
-        elif str_token == "list_debug":
-            return UnaryFunction(
-                function_name="ListDebug", numeric=False, function_to_apply=comb_debug
+        elif str_token == "interact":
+            return TernaryFunction(
+                func_name='Interact', func_to_apply=get_func_interact(self.tokens_factory("f38"))
             )
 
-        if str_token not in self.definitions:
+        if str_token not in self.definitions and not str_token in ['x0', 'x1']:
             self.not_found_list.add(str_token)
 
         return StoredValue(str_token, machine=self)
@@ -536,7 +688,7 @@ def main():
     with open("/home/tass/database/icfpc2020/messages/galaxy.txt") as fd:
         all_lines = [line.strip() for line in fd.readlines()]
         machine = Machine.from_lines(all_lines)
-        ans = machine.eval("galaxy")
+        ans = machine.eval("ap list_debug ap ap ap interact galaxy nil ap ap cons 0 0")
         print(ans)
 
 
@@ -583,7 +735,7 @@ class TestMachine(unittest.TestCase):
         self.assertEqual("Cons()", str(m.eval(":2")))
 
     def test_eq(self):
-        m = Machine.from_lines([":1 = ap ap eq 1 2", ":2 = ap ap eq 777 777",])
+        m = Machine.from_lines([":1 = ap ap eq 1 2", ":2 = ap ap eq 777 777", ])
 
         self.assertEqual("FuncF()", str(m.eval(":1")))
         self.assertEqual("FuncT()", str(m.eval(":2")))
@@ -600,7 +752,7 @@ class TestMachine(unittest.TestCase):
         self.assertEqual("Car()", str(m.eval(":2")))
 
     def test_true_false(self):
-        m = Machine.from_lines([":1 = ap ap t car cons", ":2 = ap ap f car cons",])
+        m = Machine.from_lines([":1 = ap ap t car cons", ":2 = ap ap f car cons", ])
 
         self.assertEqual("Car()", str(m.eval(":1")))
         self.assertEqual("Cons()", str(m.eval(":2")))
@@ -680,4 +832,4 @@ ap inc ap dec 111
 """
 
 if __name__ == "__main__":
-    unittest.main()
+    main()
