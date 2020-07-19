@@ -26,8 +26,8 @@ func savePicture(fn string, pic image.Image) {
 }
 
 type Result struct {
-	Draw    []interpreter.Point `json:""`
-	Results []string            `json:""`
+	Draw    [][]interpreter.Point `json:""`
+	Results []string              `json:""`
 }
 
 func main() {
@@ -55,9 +55,8 @@ func main() {
 	defer f.Close()
 
 	toks := interpreter.ParseReader(c, f)
-	r := Result{
-		Draw: c.Picture().Serial(),
-	}
+	r := Result{}
+	r.Draw = append(r.Draw, c.Picture().Serial())
 	for _, tok := range toks {
 		r.Results = append(r.Results, tok.Galaxy())
 		log.Printf("Result: %s", tok)
