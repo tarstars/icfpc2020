@@ -23,7 +23,20 @@ var (
 	}
 )
 
-type Picture map[Point]bool
+type Picture struct {
+	Pts  map[Point]bool `json:"-"`
+	Draw [][]Point      `json:""`
+}
+
+func NewPicture(pts ...Point) *Picture {
+	pic := &Picture{
+		Pts: make(map[Point]bool),
+	}
+	if len(pts) > 0 {
+		pic.DrawPts(pts...)
+	}
+	return pic
+}
 
 func (pic Picture) Eval(c Context) (Token, bool) {
 	return pic, false
@@ -31,7 +44,7 @@ func (pic Picture) Eval(c Context) (Token, bool) {
 
 func (pic Picture) String() string {
 	var pp []string
-	for p := range pic {
+	for _, p := range pic.Serial() {
 		pp = append(pp, p.String())
 	}
 	return "{" + strings.Join(pp, " ") + "}"
@@ -39,7 +52,7 @@ func (pic Picture) String() string {
 
 func (pic Picture) Galaxy() string {
 	var pp []string
-	for p := range pic {
+	for _, p := range pic.Serial() {
 		pp = append(pp, p.String())
 	}
 	return "{" + strings.Join(pp, " ") + "}"
@@ -47,7 +60,7 @@ func (pic Picture) Galaxy() string {
 
 func (pic Picture) Serial() []Point {
 	r := []Point{}
-	for p, v := range pic {
+	for p, v := range pic.Pts {
 		if !v {
 			continue
 		}
@@ -59,19 +72,37 @@ func (pic Picture) Serial() []Point {
 	return r
 }
 
-func (pic Picture) Draw(x, y int) Point {
-	r := Pt(x, y)
-	pic[r] = true
-	return r
+func (pic *Picture) DrawPts(pts ...Point) *Picture {
+	if len(pts) == 0 {
+		pic.Draw = append(pic.Draw, []Point{})
+		return pic
+	}
+	// log.Printf("DrawPts(%p) %#v", pic, pts)
+	// log.Printf("  Picture[before] %s", pic)
+	// log.Printf("  Draw[before] %#v", pic.Draw)
+	pic.Draw = append(pic.Draw, pts)
+	for _, p := range pts {
+		pic.Pts[p] = true
+	}
+	// log.Printf("  Picture[after] %s", pic)
+	// log.Printf("  Draw[after] %#v", pic.Draw)
+
+	return pic
 }
 
-func (pic Picture) DrawPicture(other Picture) {
-	for p, v := range other {
+func (pic *Picture) DrawPicture(other *Picture) {
+	// log.Printf("DrawPicture(%p) %s", pic, other)
+	// log.Printf("  Picture[before] %s", pic)
+	// log.Printf("  Draw[before] %#v", pic.Draw)
+	pic.Draw = append(pic.Draw, other.Draw...)
+	for p, v := range other.Pts {
 		if !v {
 			continue
 		}
-		pic[p] = true
+		pic.Pts[p] = true
 	}
+	// log.Printf("  Picture[after] %s", pic)
+	// log.Printf("  Draw[after] %#v", pic.Draw)
 }
 
 func (pic Picture) ColorModel() color.Model {
@@ -80,7 +111,7 @@ func (pic Picture) ColorModel() color.Model {
 
 func (pic Picture) Bounds() image.Rectangle {
 	var b *image.Rectangle
-	for p := range pic {
+	for p := range pic.Pts {
 		if b == nil {
 			b = &image.Rectangle{
 				Min: p.ToImg(),
@@ -108,7 +139,7 @@ func (pic Picture) Bounds() image.Rectangle {
 }
 
 func (pic Picture) At(x, y int) color.Color {
-	if pic[Pt(x, y)] {
+	if pic.Pts[Pt(x, y)] {
 		return White
 	}
 	return Black

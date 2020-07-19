@@ -13,7 +13,7 @@ type Context interface {
 	SetVar(n int, v Token)
 	Send(message string) string
 
-	Picture() Picture
+	Picture() *Picture
 	OutFormat() OutFormat
 
 	Level() int
@@ -32,7 +32,7 @@ const (
 type Ctx struct {
 	Vars      map[int]Token
 	ServerURL *url.URL
-	Pic       Picture
+	Pic       *Picture
 	CallLevel int
 	EvalCount int
 }
@@ -41,7 +41,7 @@ func NewContext(serverURL *url.URL) *Ctx {
 	return &Ctx{
 		Vars:      make(map[int]Token),
 		ServerURL: serverURL,
-		Pic:       Picture{},
+		Pic:       NewPicture(),
 	}
 }
 
@@ -97,7 +97,7 @@ func (c *Ctx) CountEval() int {
 	return c.EvalCount
 }
 
-func (c *Ctx) Picture() Picture {
+func (c *Ctx) Picture() *Picture {
 	return c.Pic
 }
 

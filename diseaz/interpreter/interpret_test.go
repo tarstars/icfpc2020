@@ -133,7 +133,7 @@ func TestIsNotNil(t *testing.T) {
 }
 
 func TestDraw(t *testing.T) {
-	testProgram(t, Picture{Point{X: 1, Y: 2}: true, Point{X: 41, Y: 42}: true},
+	testProgram(t, NewPicture(Point{X: 1, Y: 2}, Point{X: 41, Y: 42}),
 		Ap{}, Draw{},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 1}, Int{V: 2},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 41}, Int{V: 42},
@@ -146,11 +146,11 @@ func TestDrawListCons(t *testing.T) {
 	text := "ap draw (ap ap vec 1 2, ap ap vec 41 42)"
 	tok := ParseReader(c, strings.NewReader(text))
 	require.Len(t, tok, 1)
-	assert.Equal(t, Picture{Point{X: 1, Y: 2}: true, Point{X: 41, Y: 42}: true}, tok[0])
+	assert.Equal(t, NewPicture(Point{X: 1, Y: 2}, Point{X: 41, Y: 42}), tok[0])
 }
 
 func TestMultipledraw(t *testing.T) {
-	testProgram(t, Picture{Point{X: 1, Y: 2}: true, Point{X: 41, Y: 42}: true, Point{X: 3, Y: 4}: true},
+	testProgram(t, NewPicture(Point{X: 1, Y: 2}, Point{X: 41, Y: 42}).DrawPts(Point{X: 3, Y: 4}),
 		Ap{}, Multipledraw{},
 		Ap{}, Ap{}, Cons{},
 		// (

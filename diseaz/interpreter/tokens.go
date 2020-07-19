@@ -1447,27 +1447,17 @@ type ICons interface {
 	IsNil() bool
 }
 
-// func ListPoints(c Context, v Token) Picture {
-// 	var r Picture
-// 	for i := v.(ICons); !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
-// 		p := TailEval(c, i.Car()).(ICons)
-// 		x := TailEval(c, p.Car()).(Int).V
-// 		y := TailEval(c, p.Cdr()).(Int).V
-// 		r = append(r, Point{X: x, Y: y})
-// 	}
-// 	return r
-// }
-
-func DrawPoints(c Context, v Token) Picture {
-	pic := c.Picture()
-	r := Picture{}
-	for i := TailEval(c, v).(ICons); !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
-		p := TailEval(c, i.Car()).(ICons)
-		x := int(TailEval(c, p.Car()).(Int).V)
-		y := int(TailEval(c, p.Cdr()).(Int).V)
-		pic.Draw(x, y)
-		r.Draw(x, y)
+func DrawPoints(c Context, v Token) *Picture {
+	var pts []Point
+	r := NewPicture()
+	for i := TailEval(c, v).(ICons); !i.IsNil(); i = i.Cdr().(ICons) {
+		p := i.Car().(ICons)
+		x := int(p.Car().(Int).V)
+		y := int(p.Cdr().(Int).V)
+		pts = append(pts, Pt(x, y))
 	}
+	c.Picture().DrawPts(pts...)
+	r.DrawPts(pts...)
 	log.Printf("Draw %s", r)
 	return r
 }
@@ -1534,7 +1524,7 @@ func (t Multipledraw) Apply(v Token) Token {
 }
 
 func (t Multipledraw1) Eval(c Context) (Token, bool) {
-	r := Picture{}
+	r := NewPicture()
 	v := TailEval(c, t.X0).(ICons)
 	for i := v; !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
 		r.DrawPicture(DrawPoints(c, i.Car()))
