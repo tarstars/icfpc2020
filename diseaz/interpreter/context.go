@@ -12,11 +12,18 @@ type Context interface {
 	GetVar(n int) Token
 	SetVar(n int, v Token)
 	Send(message string) string
+
+	Level() int
+	Enter() int
+	Leave() int
+	CountEval() int
 }
 
 type Ctx struct {
 	Vars      map[int]Token
 	ServerURL *url.URL
+	CallLevel int
+	EvalCount int
 }
 
 func NewContext(serverURL *url.URL) *Ctx {
@@ -26,7 +33,7 @@ func NewContext(serverURL *url.URL) *Ctx {
 	}
 }
 
-func (c *Ctx) GetVar(n int) Token {
+func (c Ctx) GetVar(n int) Token {
 	p, exists := c.Vars[n]
 	if !exists {
 		log.Panicf("Variable does not exist: %d", n)
@@ -57,4 +64,23 @@ func (c *Ctx) Send(message string) string {
 	r := string(body)
 	log.Printf("Recv: %#v", r)
 	return r
+}
+
+func (c Ctx) Level() int {
+	return c.CallLevel
+}
+
+func (c *Ctx) Enter() int {
+	c.CallLevel++
+	return c.CallLevel
+}
+
+func (c *Ctx) Leave() int {
+	c.CallLevel--
+	return c.CallLevel
+}
+
+func (c *Ctx) CountEval() int {
+	c.EvalCount++
+	return c.EvalCount
 }
