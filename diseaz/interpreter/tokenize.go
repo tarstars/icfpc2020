@@ -7,14 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 )
-
-// var spaces = regexp.MustCompile("[ \t]+")
-
-// func splitTokens(s string) []string {
-// 	return spaces.Split(strings.TrimSpace(s), -1)
-// }
 
 func makeTokenMap(ts ...Token) map[string]Token {
 	r := make(map[string]Token)
@@ -25,11 +18,10 @@ func makeTokenMap(ts ...Token) map[string]Token {
 }
 
 func ParseVarN(s string) Token {
-	r0, rl := utf8.DecodeRuneInString(s)
-	if r0 != ':' {
+	if !strings.HasPrefix(s, ":") {
 		return nil
 	}
-	n, err := strconv.ParseInt(s[rl:], 10, 64)
+	n, err := strconv.ParseInt(s[1:], 10, 64)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -37,8 +29,9 @@ func ParseVarN(s string) Token {
 }
 
 func ParseInt(s string) Token {
-	r0, _ := utf8.DecodeRuneInString(s)
-	if !unicode.IsDigit(r0) && r0 != '-' {
+	idx := strings.IndexFunc(s, unicode.IsDigit)
+	sign := strings.HasPrefix(s, "-")
+	if (sign && idx != 1) || (!sign && idx != 0) {
 		return nil
 	}
 	n, err := strconv.ParseInt(s, 10, 64)
@@ -49,29 +42,36 @@ func ParseInt(s string) Token {
 }
 
 func IsComment(s string) bool {
-	r0, _ := utf8.DecodeRuneInString(s)
-	if r0 == '#' {
+	if strings.HasPrefix(s, "#") {
 		return true
 	}
 	return false
 }
 
-func ParseLine(c Context, s string) Token {
-	toks := strings.Fields(s)
-	if len(toks) == 0 || IsComment(toks[0]) {
-		return nil
-	}
-
-	assign := false
-	var varN VarN
-
-	if len(toks) > 2 && toks[1] == "=" && ParseVarN(toks[0]) != nil {
-		varN, assign = ParseVarN(toks[0]).(VarN), true
-		toks = toks[2:]
-	}
+func ProcessTokens(c Context, toks []string) Token {
+	toks = splitOn(toks, "(")
+	toks = splitOn(toks, ")")
+	toks = splitOn(toks, ",")
 
 	var p Program
+	empty := true
 	for _, ts := range toks {
+		if ts == "(" || ts == "," {
+			p.PushProgram(Program{
+				Ap{}, Ap{}, Cons{},
+			})
+			empty = true
+			continue
+		}
+		if ts == ")" {
+			if empty {
+				p.Push(Nil{})
+			}
+			p.Push(Nil{})
+			continue
+		}
+
+		empty = false
 		t := ParseVarN(ts)
 		if t != nil {
 			p.Push(t)
@@ -90,17 +90,56 @@ func ParseLine(c Context, s string) Token {
 		log.Panicf("Unknown token: %#v", ts)
 	}
 
+	// log.Printf("Program: %#v", p)
+
 	tok, err := Interpret(c, p)
 	if err != nil {
 		log.Panic(err)
 	}
+
+	return tok
+}
+
+func splitOn(toks []string, sep string) []string {
+	var r []string
+	for _, t := range toks {
+		ts := strings.Split(t, sep)
+		if ts[0] != "" {
+			r = append(r, ts[0])
+		}
+		for _, ti := range ts[1:] {
+			r = append(r, sep)
+			if ti != "" {
+				r = append(r, ti)
+			}
+		}
+	}
+	return r
+}
+
+func ParseLine(c Context, s string) Token {
+	toks := strings.Fields(s)
+	if len(toks) == 0 || IsComment(toks[0]) {
+		return nil
+	}
+
+	assign := false
+	var varN VarN
+
+	if len(toks) > 2 && toks[1] == "=" && ParseVarN(toks[0]) != nil {
+		varN, assign = ParseVarN(toks[0]).(VarN), true
+		toks = toks[2:]
+		// log.Printf("Assign %s = %s", varN, strings.Join(toks, " "))
+	}
+
+	tok := ProcessTokens(c, toks)
 
 	if assign {
 		c.SetVar(varN.N, tok)
 		return nil
 	}
 
-	r := tok.Eval(c)
+	r := TailEval(c, tok)
 	// log.Printf("%s => %s", tok, r)
 	return r
 }
@@ -139,8 +178,10 @@ var tokenMap = makeTokenMap(
 	Cdr{},
 	Nil{},
 	IsNil{},
+	Vec{},
 	Draw{},
 	Checkerboard{},
 	Multipledraw{},
 	If0{},
+	Interact{},
 )

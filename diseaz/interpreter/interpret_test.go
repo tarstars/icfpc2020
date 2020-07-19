@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"log"
 	"strings"
 	"testing"
 
@@ -14,8 +13,8 @@ func runProgram(t *testing.T, ts ...Token) Token {
 	p := NewProgram(ts...)
 	tok, err := Interpret(c, p)
 	require.NoError(t, err, "Interpret failed")
-	log.Printf("Program: %s", tok)
-	r := tok.Eval(c)
+	// log.Printf("Program: %s", tok)
+	r := TailEval(c, tok)
 	return r
 }
 
@@ -140,6 +139,13 @@ func TestDraw(t *testing.T) {
 	)
 }
 
+func TestDrawListCons(t *testing.T) {
+	c := NewContext(nil)
+	text := "ap draw (ap ap vec 1 2, ap ap vec 41 42)"
+	tok := ParseReader(c, strings.NewReader(text))
+	assert.Equal(t, Picture{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}}, tok)
+}
+
 func TestMultipledraw(t *testing.T) {
 	testProgram(t, Picture{Point{X: 1, Y: 2}, Point{X: 41, Y: 42}, Point{X: 3, Y: 4}},
 		Ap{}, Multipledraw{},
@@ -157,7 +163,7 @@ func TestMultipledraw(t *testing.T) {
 }
 
 func TestIf0(t *testing.T) {
-	testProgram(t, Add2{X0: Int{V: 1}, X1: Int{V: 41}},
+	testProgram(t, Int{V: 42},
 		Ap{}, Ap{}, Ap{}, If0{},
 		Ap{}, Dec{}, Int{V: 1},
 		Ap{}, Ap{}, Add{}, Int{V: 1}, Int{V: 41},

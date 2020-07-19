@@ -8,7 +8,7 @@ import (
 )
 
 type Token interface {
-	Eval(c Context) Token
+	Eval(c Context) (Token, bool)
 	String() string
 }
 
@@ -29,8 +29,8 @@ type Func interface {
 
 type Ap struct{}
 
-func (t Ap) Eval(c Context) Token {
-	return t
+func (t Ap) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Ap) String() string {
@@ -46,11 +46,11 @@ func (t Ap2) Apply(v Token) Token {
 	return Ap2{F: t, A: v}
 }
 
-func (t Ap2) Eval(c Context) Token {
-	f := t.F.Eval(c).(Func)
-	r := f.Apply(t.A).Eval(c)
+func (t Ap2) Eval(c Context) (Token, bool) {
+	f := TailEval(c, t.F).(Func)
+	r := f.Apply(t.A)
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
 func (t Ap2) String() string {
@@ -61,8 +61,8 @@ type VarN struct {
 	N int
 }
 
-func (t VarN) Eval(c Context) Token {
-	return c.GetVar(t.N)
+func (t VarN) Eval(c Context) (Token, bool) {
+	return c.GetVar(t.N), true
 }
 
 func (t VarN) String() string {
@@ -77,8 +77,8 @@ func (t Int) Value() int64 {
 	return t.V
 }
 
-func (t Int) Eval(c Context) Token {
-	return t
+func (t Int) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Int) String() string {
@@ -94,15 +94,15 @@ func (t Inc) Apply(v Token) Token {
 	return Inc1{X0: v}
 }
 
-func (t Inc1) Eval(c Context) Token {
-	v := t.X0.Eval(c).(Value)
-	r := Int{V: v.Value() + 1}
+func (t Inc1) Eval(c Context) (Token, bool) {
+	v := TailEval(c, t.X0).(Int)
+	r := Int{V: v.V + 1}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Inc) Eval(c Context) Token {
-	return t
+func (t Inc) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Inc) String() string {
@@ -122,15 +122,15 @@ func (t Dec) Apply(v Token) Token {
 	return Dec1{X0: v}
 }
 
-func (t Dec1) Eval(c Context) Token {
-	v := t.X0.Eval(c).(Value)
-	r := Int{V: v.Value() - 1}
+func (t Dec1) Eval(c Context) (Token, bool) {
+	v := TailEval(c, t.X0).(Int)
+	r := Int{V: v.V - 1}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Dec) Eval(c Context) Token {
-	return t
+func (t Dec) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Dec) String() string {
@@ -158,20 +158,20 @@ func (t Add1) Apply(v Token) Token {
 	return Add2{X0: t.X0, X1: v}
 }
 
-func (t Add2) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Value)
-	x1 := t.X1.Eval(c).(Value)
-	r := Int{V: x0.Value() + x1.Value()}
+func (t Add2) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int)
+	x1 := TailEval(c, t.X1).(Int)
+	r := Int{V: x0.V + x1.V}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Add) Eval(c Context) Token {
-	return t
+func (t Add) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Add1) Eval(c Context) Token {
-	return t
+func (t Add1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Add) String() string {
@@ -179,11 +179,11 @@ func (t Add) String() string {
 }
 
 func (t Add1) String() string {
-	return fmt.Sprintf("(add %s)", t.X0)
+	return fmt.Sprintf("(add1 %s)", t.X0)
 }
 
 func (t Add2) String() string {
-	return fmt.Sprintf("(add %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(add2 %s %s)", t.X0, t.X1)
 }
 
 type Mul struct{}
@@ -203,20 +203,20 @@ func (t Mul1) Apply(v Token) Token {
 	return Mul2{X0: t.X0, X1: v}
 }
 
-func (t Mul2) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Value)
-	x1 := t.X1.Eval(c).(Value)
-	r := Int{V: x0.Value() * x1.Value()}
+func (t Mul2) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int)
+	x1 := TailEval(c, t.X1).(Int)
+	r := Int{V: x0.V * x1.V}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Mul) Eval(c Context) Token {
-	return t
+func (t Mul) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Mul1) Eval(c Context) Token {
-	return t
+func (t Mul1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Mul) String() string {
@@ -224,11 +224,11 @@ func (t Mul) String() string {
 }
 
 func (t Mul1) String() string {
-	return fmt.Sprintf("(mul %s)", t.X0)
+	return fmt.Sprintf("(mul1 %s)", t.X0)
 }
 
 func (t Mul2) String() string {
-	return fmt.Sprintf("(mul %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(mul2 %s %s)", t.X0, t.X1)
 }
 
 type Div struct{}
@@ -248,20 +248,20 @@ func (t Div1) Apply(v Token) Token {
 	return Div2{X0: t.X0, X1: v}
 }
 
-func (t Div2) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Value)
-	x1 := t.X1.Eval(c).(Value)
-	r := Int{V: x0.Value() / x1.Value()}
+func (t Div2) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int)
+	x1 := TailEval(c, t.X1).(Int)
+	r := Int{V: x0.V / x1.V}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Div) Eval(c Context) Token {
-	return t
+func (t Div) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Div1) Eval(c Context) Token {
-	return t
+func (t Div1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Div) String() string {
@@ -269,11 +269,11 @@ func (t Div) String() string {
 }
 
 func (t Div1) String() string {
-	return fmt.Sprintf("(div %s)", t.X0)
+	return fmt.Sprintf("(div1 %s)", t.X0)
 }
 
 func (t Div2) String() string {
-	return fmt.Sprintf("(div %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(div2 %s %s)", t.X0, t.X1)
 }
 
 type Eq struct{}
@@ -293,25 +293,23 @@ func (t Eq1) Apply(v Token) Token {
 	return Eq2{X0: t.X0, X1: v}
 }
 
-func (t Eq2) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Value)
-	x1 := t.X1.Eval(c).(Value)
-	var r Token
-	if x0.Value() == x1.Value() {
+func (t Eq2) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int)
+	x1 := TailEval(c, t.X1).(Int)
+	var r Token = False{}
+	if x0.V == x1.V {
 		r = True{}
-	} else {
-		r = False{}
 	}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Eq) Eval(c Context) Token {
-	return t
+func (t Eq) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Eq1) Eval(c Context) Token {
-	return t
+func (t Eq1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Eq) String() string {
@@ -319,11 +317,11 @@ func (t Eq) String() string {
 }
 
 func (t Eq1) String() string {
-	return fmt.Sprintf("(eq %s)", t.X0)
+	return fmt.Sprintf("(eq1 %s)", t.X0)
 }
 
 func (t Eq2) String() string {
-	return fmt.Sprintf("(eq %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(eq2 %s %s)", t.X0, t.X1)
 }
 
 type Lt struct{}
@@ -343,23 +341,23 @@ func (t Lt1) Apply(v Token) Token {
 	return Lt2{X0: t.X0, X1: v}
 }
 
-func (t Lt2) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Value)
-	x1 := t.X1.Eval(c).(Value)
+func (t Lt2) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int)
+	x1 := TailEval(c, t.X1).(Int)
 	var r Token = False{}
-	if x0.Value() < x1.Value() {
+	if x0.V < x1.V {
 		r = True{}
 	}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Lt) Eval(c Context) Token {
-	return t
+func (t Lt) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Lt1) Eval(c Context) Token {
-	return t
+func (t Lt1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Lt) String() string {
@@ -367,15 +365,15 @@ func (t Lt) String() string {
 }
 
 func (t Lt1) String() string {
-	return fmt.Sprintf("(lt %s)", t.X0)
+	return fmt.Sprintf("(lt1 %s)", t.X0)
 }
 
 func (t Lt2) String() string {
-	return fmt.Sprintf("(lt %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(lt2 %s %s)", t.X0, t.X1)
 }
 
 func mod(c Context, v Token) string {
-	switch tt := v.Eval(c).(type) {
+	switch tt := v.(type) { // TailEval?
 	case Int:
 		return modInt(tt.V)
 	case ICons:
@@ -464,8 +462,8 @@ type Signal struct {
 	S string
 }
 
-func (t Signal) Eval(c Context) Token {
-	return t
+func (t Signal) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Signal) String() string {
@@ -481,15 +479,15 @@ func (t Modulate) Apply(v Token) Token {
 	return Modulate1{X0: v}
 }
 
-func (t Modulate1) Eval(c Context) Token {
-	x0 := t.X0.Eval(c)
+func (t Modulate1) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0)
 	r := Signal{S: mod(c, x0)}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Modulate) Eval(c Context) Token {
-	return t
+func (t Modulate) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Modulate) String() string {
@@ -509,18 +507,18 @@ func (t Demodulate) Apply(v Token) Token {
 	return Demodulate1{X0: v}
 }
 
-func (t Demodulate1) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Signal).S
+func (t Demodulate1) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Signal).S
 	r, s := demod(x0)
 	if len(s) > 0 {
 		log.Panicf("Invalid signal: %s", x0)
 	}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Demodulate) Eval(c Context) Token {
-	return t
+func (t Demodulate) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Demodulate) String() string {
@@ -540,19 +538,19 @@ func (t Send) Apply(v Token) Token {
 	return Send1{X0: v}
 }
 
-func (t Send1) Eval(c Context) Token {
-	x0 := t.X0.Eval(c)
+func (t Send1) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0)
 	rm := c.Send(mod(c, x0))
 	r, s := demod(rm)
 	if len(s) > 0 {
 		log.Panicf("Extra tail on demod %#v = %#v", rm, s)
 	}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Send) Eval(c Context) Token {
-	return t
+func (t Send) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Send) String() string {
@@ -572,15 +570,15 @@ func (t Neg) Apply(v Token) Token {
 	return Neg1{X0: v}
 }
 
-func (t Neg) Eval(c Context) Token {
-	return t
+func (t Neg) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Neg1) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Value)
-	r := Int{V: -x0.Value()}
+func (t Neg1) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int)
+	r := Int{V: -x0.V}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
 func (t Neg) String() string {
@@ -617,25 +615,29 @@ func (t S2) Apply(v Token) Token {
 	return S3{X0: t.X0, X1: t.X1, X2: v}
 }
 
-func (t S3) Eval(c Context) Token {
-	y1 := t.X0.Eval(c).(Func)
-	y2 := y1.Apply(t.X2).Eval(c).(Func)
-	y3 := t.X1.(Func).Apply(t.X2)
-	r := y2.Apply(y3).Eval(c)
+func (t S3) Eval(c Context) (Token, bool) {
+	f0 := TailEval(c, t.X0).(Func)
+	f1 := TailEval(c, f0.Apply(t.X2)).(Func)
+	r := f1.Apply(
+		Ap2{
+			F: t.X1,
+			A: t.X2,
+		},
+	)
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t S) Eval(c Context) Token {
-	return t
+func (t S) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t S1) Eval(c Context) Token {
-	return t
+func (t S1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t S2) Eval(c Context) Token {
-	return t
+func (t S2) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t S) String() string {
@@ -643,15 +645,15 @@ func (t S) String() string {
 }
 
 func (t S1) String() string {
-	return fmt.Sprintf("(s %s)", t.X0)
+	return fmt.Sprintf("(s1 %s)", t.X0)
 }
 
 func (t S2) String() string {
-	return fmt.Sprintf("(s %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(s2 %s %s)", t.X0, t.X1)
 }
 
 func (t S3) String() string {
-	return fmt.Sprintf("(s %s %s %s)", t.X0, t.X1, t.X2)
+	return fmt.Sprintf("(s3 %s %s %s)", t.X0, t.X1, t.X2)
 }
 
 type C struct{}
@@ -680,24 +682,24 @@ func (t C2) Apply(v Token) Token {
 	return C3{X0: t.X0, X1: t.X1, X2: v}
 }
 
-func (t C3) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Func)
-	y1 := x0.Apply(t.X2).Eval(c).(Func)
-	r := y1.Apply(t.X1).Eval(c)
+func (t C3) Eval(c Context) (Token, bool) {
+	f0 := TailEval(c, t.X0).(Func)
+	f1 := TailEval(c, f0.Apply(t.X2)).(Func)
+	r := f1.Apply(t.X1)
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t C) Eval(c Context) Token {
-	return t
+func (t C) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t C1) Eval(c Context) Token {
-	return t
+func (t C1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t C2) Eval(c Context) Token {
-	return t
+func (t C2) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t C) String() string {
@@ -705,15 +707,15 @@ func (t C) String() string {
 }
 
 func (t C1) String() string {
-	return fmt.Sprintf("(c %s)", t.X0)
+	return fmt.Sprintf("(c1 %s)", t.X0)
 }
 
 func (t C2) String() string {
-	return fmt.Sprintf("(c %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(c2 %s %s)", t.X0, t.X1)
 }
 
 func (t C3) String() string {
-	return fmt.Sprintf("(c %s %s %s)", t.X0, t.X1, t.X2)
+	return fmt.Sprintf("(c3 %s %s %s)", t.X0, t.X1, t.X2)
 }
 
 type B struct{}
@@ -742,28 +744,26 @@ func (t B2) Apply(v Token) Token {
 	return B3{X0: t.X0, X1: t.X1, X2: v}
 }
 
-func (t B3) Eval(c Context) Token {
-	r := Ap2{
-		F: t.X0,
-		A: Ap2{
+func (t B3) Eval(c Context) (Token, bool) {
+	r := TailEval(c, t.X0).(Func).Apply(
+		Ap2{
 			F: t.X1,
 			A: t.X2,
 		},
-	}.Eval(c)
-	// log.Printf("%s => %s", t, r)
-	return r
+	)
+	return r, true
 }
 
-func (t B) Eval(c Context) Token {
-	return t
+func (t B) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t B1) Eval(c Context) Token {
-	return t
+func (t B1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t B2) Eval(c Context) Token {
-	return t
+func (t B2) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t B) String() string {
@@ -771,15 +771,15 @@ func (t B) String() string {
 }
 
 func (t B1) String() string {
-	return fmt.Sprintf("(b %s)", t.X0)
+	return fmt.Sprintf("(b1 %s)", t.X0)
 }
 
 func (t B2) String() string {
-	return fmt.Sprintf("(b %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(b2 %s %s)", t.X0, t.X1)
 }
 
 func (t B3) String() string {
-	return fmt.Sprintf("(b %s %s %s)", t.X0, t.X1, t.X2)
+	return fmt.Sprintf("(b3 %s %s %s)", t.X0, t.X1, t.X2)
 }
 
 type Pwr2 struct{}
@@ -791,15 +791,15 @@ func (t Pwr2) Apply(v Token) Token {
 	return Pwr21{X0: v}
 }
 
-func (t Pwr21) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Int).V
+func (t Pwr21) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int).V
 	r := Int{V: 1 << x0}
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, false
 }
 
-func (t Pwr2) Eval(c Context) Token {
-	return t
+func (t Pwr2) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Pwr2) String() string {
@@ -810,34 +810,6 @@ func (t Pwr21) String() string {
 	return fmt.Sprintf("(pwr2 %s)", t.X0)
 }
 
-// type Pwr2 struct{}
-
-// func (t Pwr2) Eval(c Context) Token {
-// 	r := S2{
-// 		X0: C2{
-// 			X0: Eq1{
-// 				X0: Int{V: 0},
-// 			},
-// 			X1: Int{V: 1},
-// 		},
-// 		X1: B2{
-// 			X0: Mul1{
-// 				X0: Int{V: 2},
-// 			},
-// 			X1: B2{
-// 				X0: Pwr2{},
-// 				X1: Dec{},
-// 			},
-// 		},
-// 	}.Eval(c)
-// 	// log.Printf("%s => %s", t, r)
-// 	return r
-// }
-
-// func (t Pwr2) String() string {
-// 	return "pwr2"
-// }
-
 type I struct{}
 type I1 struct {
 	X0 Token
@@ -847,14 +819,14 @@ func (t I) Apply(v Token) Token {
 	return I1{X0: v}
 }
 
-func (t I1) Eval(c Context) Token {
-	r := t.X0.Eval(c)
+func (t I1) Eval(c Context) (Token, bool) {
+	r := t.X0
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t I) Eval(c Context) Token {
-	return t
+func (t I) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t I) String() string {
@@ -881,18 +853,18 @@ func (t True1) Apply(v Token) Token {
 	return True2{X0: t.X0}
 }
 
-func (t True2) Eval(c Context) Token {
-	r := t.X0.Eval(c)
+func (t True2) Eval(c Context) (Token, bool) {
+	r := t.X0
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t True) Eval(c Context) Token {
-	return t
+func (t True) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t True1) Eval(c Context) Token {
-	return t
+func (t True1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t True) String() string {
@@ -921,18 +893,18 @@ func (t False1) Apply(v Token) Token {
 	return False2{X1: v}
 }
 
-func (t False2) Eval(c Context) Token {
-	r := t.X1.Eval(c)
+func (t False2) Eval(c Context) (Token, bool) {
+	r := t.X1
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t False) Eval(c Context) Token {
-	return t
+func (t False) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t False1) Eval(c Context) Token {
-	return t
+func (t False1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t False) String() string {
@@ -960,9 +932,6 @@ type Cons3 struct {
 	X1 Token
 	X2 Token
 }
-type Vec struct {
-	Cons
-}
 
 func (t Cons) Apply(v Token) Token {
 	return Cons1{X0: v}
@@ -976,23 +945,26 @@ func (t Cons2) Apply(v Token) Token {
 	return Cons3{X0: t.X0, X1: t.X1, X2: v}
 }
 
-func (t Cons3) Eval(c Context) Token {
-	y1 := t.X2.Eval(c).(Func).Apply(t.X0).Eval(c).(Func)
-	r := y1.Apply(t.X1).Eval(c)
+func (t Cons3) Eval(c Context) (Token, bool) {
+	y1 := TailEval(c, t.X2).(Func)
+	y2 := TailEval(c, y1.Apply(t.X0)).(Func)
+	r := y2.Apply(t.X1)
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t Cons) Eval(c Context) Token {
-	return t
+func (t Cons) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Cons1) Eval(c Context) Token {
-	return t
+func (t Cons1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t Cons2) Eval(c Context) Token {
-	return t
+func (t Cons2) Eval(c Context) (Token, bool) {
+	t.X0 = TailEval(c, t.X0)
+	t.X1 = TailEval(c, t.X1)
+	return t, false
 }
 
 func (t Cons2) Car() Token {
@@ -1012,15 +984,23 @@ func (t Cons) String() string {
 }
 
 func (t Cons1) String() string {
-	return fmt.Sprintf("(cons %s)", t.X0)
+	return fmt.Sprintf("(cons1 %s)", t.X0)
 }
 
 func (t Cons2) String() string {
-	return fmt.Sprintf("(cons %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(cons2 %s %s)", t.X0, t.X1)
 }
 
 func (t Cons3) String() string {
-	return fmt.Sprintf("(cons %s %s %s)", t.X0, t.X1, t.X2)
+	return fmt.Sprintf("(cons3 %s %s %s)", t.X0, t.X1, t.X2)
+}
+
+type Vec struct {
+	Cons
+}
+
+func (t Vec) String() string {
+	return "vec"
 }
 
 type Car struct{}
@@ -1032,15 +1012,15 @@ func (t Car) Apply(v Token) Token {
 	return Car1{X0: v}
 }
 
-func (t Car1) Eval(c Context) Token {
-	y1 := t.X0.Eval(c).(Func)
-	r := y1.Apply(True{}).Eval(c)
+func (t Car1) Eval(c Context) (Token, bool) {
+	y1 := TailEval(c, t.X0).(Func)
+	r := y1.Apply(True{})
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t Car) Eval(c Context) Token {
-	return t
+func (t Car) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Car) String() string {
@@ -1060,15 +1040,15 @@ func (t Cdr) Apply(v Token) Token {
 	return Cdr1{X0: v}
 }
 
-func (t Cdr1) Eval(c Context) Token {
-	y1 := t.X0.Eval(c).(Func)
-	r := y1.Apply(False{}).Eval(c)
+func (t Cdr1) Eval(c Context) (Token, bool) {
+	y1 := TailEval(c, t.X0).(Func)
+	r := y1.Apply(False{})
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t Cdr) Eval(c Context) Token {
-	return t
+func (t Cdr) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Cdr) String() string {
@@ -1086,12 +1066,12 @@ func (t Nil) Apply(v Token) Token {
 	return Nil1{}
 }
 
-func (t Nil1) Eval(c Context) Token {
-	return True{}
+func (t Nil1) Eval(c Context) (Token, bool) {
+	return True{}, false
 }
 
-func (t Nil) Eval(c Context) Token {
-	return t
+func (t Nil) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Nil) Car() Token {
@@ -1126,16 +1106,16 @@ func (t isNil1) Apply(v Token) Token {
 	return isNil2{}
 }
 
-func (t isNil2) Eval(c Context) Token {
-	return False{}
+func (t isNil2) Eval(c Context) (Token, bool) {
+	return False{}, false
 }
 
-func (t isNil) Eval(c Context) Token {
-	return t
+func (t isNil) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t isNil1) Eval(c Context) Token {
-	return t
+func (t isNil1) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t isNil) String() string {
@@ -1159,15 +1139,15 @@ func (t IsNil) Apply(v Token) Token {
 	return IsNil1{X0: v}
 }
 
-func (t IsNil1) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Func)
-	r := x0.Apply(isNil{}).Eval(c)
+func (t IsNil1) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Func)
+	r := x0.Apply(isNil{})
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t IsNil) Eval(c Context) Token {
-	return t
+func (t IsNil) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t IsNil) String() string {
@@ -1184,13 +1164,13 @@ type Point struct {
 }
 
 func (p Point) String() string {
-	return fmt.Sprintf("(%d, %d)", p.X, p.Y)
+	return fmt.Sprintf("[%d, %d]", p.X, p.Y)
 }
 
 type Picture []Point
 
-func (ps Picture) Eval(c Context) Token {
-	return ps
+func (ps Picture) Eval(c Context) (Token, bool) {
+	return ps, false
 }
 
 func (ps Picture) String() string {
@@ -1198,7 +1178,7 @@ func (ps Picture) String() string {
 	for _, p := range ps {
 		pp = append(pp, p.String())
 	}
-	return "(" + strings.Join(pp, " ") + ")"
+	return "[" + strings.Join(pp, " ") + "]"
 }
 
 type ICons interface {
@@ -1210,17 +1190,17 @@ type ICons interface {
 
 func ListPoints(c Context, v Token) Picture {
 	var r Picture
-	for i := v.(ICons); !i.IsNil(); i = i.Cdr().Eval(c).(ICons) {
-		p := i.Car().Eval(c).(ICons)
-		x := p.Car().Eval(c).(Int).V
-		y := p.Cdr().Eval(c).(Int).V
+	for i := v.(ICons); !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
+		p := TailEval(c, i.Car()).(ICons)
+		x := TailEval(c, p.Car()).(Int).V
+		y := TailEval(c, p.Cdr()).(Int).V
 		r = append(r, Point{X: x, Y: y})
 	}
 	return r
 }
 
 func DrawPoints(c Context, v Token) Picture {
-	ps := ListPoints(c, v.Eval(c))
+	ps := ListPoints(c, TailEval(c, v))
 	log.Printf("Draw %s", ps)
 	return ps
 }
@@ -1234,12 +1214,12 @@ func (t Draw) Apply(v Token) Token {
 	return Draw1{X0: v}
 }
 
-func (t Draw1) Eval(c Context) Token {
-	return DrawPoints(c, t.X0)
+func (t Draw1) Eval(c Context) (Token, bool) {
+	return DrawPoints(c, t.X0), false
 }
 
-func (t Draw) Eval(c Context) Token {
-	return t
+func (t Draw) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Draw) String() string {
@@ -1257,8 +1237,8 @@ func (t Checkerboard) Apply(v Token) Token {
 	return nil
 }
 
-func (t Checkerboard) Eval(c Context) Token {
-	return t
+func (t Checkerboard) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Checkerboard) String() string {
@@ -1274,17 +1254,18 @@ func (t Multipledraw) Apply(v Token) Token {
 	return Multipledraw1{X0: v}
 }
 
-func (t Multipledraw1) Eval(c Context) Token {
+func (t Multipledraw1) Eval(c Context) (Token, bool) {
+	log.Printf("Eval: (multipledraw %s)", t.X0)
 	var r Picture
-	v := t.X0.Eval(c)
-	for i := v.(ICons); !i.IsNil(); i = i.Cdr().Eval(c).(ICons) {
+	v := TailEval(c, t.X0).(ICons)
+	for i := v; !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
 		r = append(r, DrawPoints(c, i.Car())...)
 	}
-	return r
+	return r, false
 }
 
-func (t Multipledraw) Eval(c Context) Token {
-	return t
+func (t Multipledraw) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t Multipledraw) String() string {
@@ -1321,27 +1302,26 @@ func (t If02) Apply(v Token) Token {
 	return If03{X0: t.X0, X1: t.X1, X2: v}
 }
 
-func (t If03) Eval(c Context) Token {
-	x0 := t.X0.Eval(c).(Int).V
+func (t If03) Eval(c Context) (Token, bool) {
+	x0 := TailEval(c, t.X0).(Int).V
 	r := t.X2
 	if x0 == 0 {
 		r = t.X1
 	}
-	// r = r.Eval(c)
 	// log.Printf("%s => %s", t, r)
-	return r
+	return r, true
 }
 
-func (t If0) Eval(c Context) Token {
-	return t
+func (t If0) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t If01) Eval(c Context) Token {
-	return t
+func (t If01) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
-func (t If02) Eval(c Context) Token {
-	return t
+func (t If02) Eval(c Context) (Token, bool) {
+	return t, false
 }
 
 func (t If0) String() string {
@@ -1349,13 +1329,162 @@ func (t If0) String() string {
 }
 
 func (t If01) String() string {
-	return fmt.Sprintf("(if0 %s)", t.X0)
+	return fmt.Sprintf("(if0_1 %s)", t.X0)
 }
 
 func (t If02) String() string {
-	return fmt.Sprintf("(if0 %s %s)", t.X0, t.X1)
+	return fmt.Sprintf("(if0_2 %s %s)", t.X0, t.X1)
 }
 
 func (t If03) String() string {
-	return fmt.Sprintf("(if0 %s %s %s)", t.X0, t.X1, t.X2)
+	return fmt.Sprintf("(if0_3 %s %s %s)", t.X0, t.X1, t.X2)
+}
+
+type interactHelper struct{}
+type interactHelper1 struct {
+	X0 Token
+}
+type interactHelper2 struct {
+	X0 Token
+	X1 Token
+}
+
+func (t interactHelper) Apply(v Token) Token {
+	return interactHelper1{X0: v}
+}
+
+func (t interactHelper1) Apply(v Token) Token {
+	return interactHelper2{X0: t.X0, X1: v}
+}
+
+func (t interactHelper2) Eval(c Context) (Token, bool) {
+	// (f38 x0 x1) =
+	//   (if0 (car x1)
+	// 	  -- then
+	//    (cons (modem (car (cdr x1))) (cons (multipledraw (car (cdr (cdr x1)))) nil))
+	// 	  -- else
+	// 	  (interact x0 (modem (car (cdr x1))) (send (car (cdr (cdr x1))))))
+
+	// f38(protocol, (flag, newState, data)) = if flag == 0
+	//                 then (modem(newState), multipledraw(data))
+	//                 else interact(protocol, modem(newState), send(data))
+
+	x1 := TailEval(c, t.X1).(ICons)
+	flag := TailEval(c, x1.Car()).(Int)
+	x11 := TailEval(c, x1.Cdr()).(ICons)
+	newState := x11.Car()
+	x12 := TailEval(c, x11.Cdr()).(ICons)
+	data := x12.Car()
+	if flag.V == 0 {
+		r := Cons2{
+			X0: newState,
+			X1: Cons2{
+				X0: Multipledraw1{X0: data},
+				X1: Nil{},
+			},
+		}
+		// log.Printf("%s => %s", t, r)
+		return r, true
+	} else {
+		r := Interact3{
+			X0: t.X0,
+			X1: newState,
+			X2: Send1{
+				X0: data,
+			},
+		}
+		// log.Printf("%s => %s", t, r)
+		return r, true
+	}
+}
+
+func (t interactHelper) Eval(c Context) (Token, bool) {
+	return t, false
+}
+
+func (t interactHelper1) Eval(c Context) (Token, bool) {
+	return t, false
+}
+
+func (t interactHelper) String() string {
+	return "interact-helper"
+}
+
+func (t interactHelper1) String() string {
+	return fmt.Sprintf("(interact-helper1 %s)", t.X0)
+}
+
+func (t interactHelper2) String() string {
+	return fmt.Sprintf("(interact-helper2 %s %s)", t.X0, t.X1)
+}
+
+type Interact struct{}
+type Interact1 struct {
+	X0 Token
+}
+type Interact2 struct {
+	X0 Token
+	X1 Token
+}
+type Interact3 struct {
+	X0 Token
+	X1 Token
+	X2 Token
+}
+
+func (t Interact) Apply(v Token) Token {
+	return Interact1{X0: v}
+}
+
+func (t Interact1) Apply(v Token) Token {
+	return Interact2{X0: t.X0, X1: v}
+}
+
+func (t Interact2) Apply(v Token) Token {
+	return Interact3{X0: t.X0, X1: t.X1, X2: v}
+}
+
+func (t Interact3) Eval(c Context) (Token, bool) {
+	// (interact x0 x1 x2) = (f38 x0 (x0 x1 x2))
+
+	r := interactHelper2{
+		X0: t.X0,
+		X1: Ap2{
+			F: Ap2{
+				F: t.X0,
+				A: t.X1,
+			},
+			A: t.X2,
+		},
+	}
+	// log.Printf("%s => %s", t, r)
+	return r, true
+}
+
+func (t Interact) Eval(c Context) (Token, bool) {
+	return t, false
+}
+
+func (t Interact1) Eval(c Context) (Token, bool) {
+	return t, false
+}
+
+func (t Interact2) Eval(c Context) (Token, bool) {
+	return t, false
+}
+
+func (t Interact) String() string {
+	return "interact"
+}
+
+func (t Interact1) String() string {
+	return fmt.Sprintf("(interact1 %s)", t.X0)
+}
+
+func (t Interact2) String() string {
+	return fmt.Sprintf("(interact2 %s %s)", t.X0, t.X1)
+}
+
+func (t Interact3) String() string {
+	return fmt.Sprintf("(interact3 %s %s %s)", t.X0, t.X1, t.X2)
 }
