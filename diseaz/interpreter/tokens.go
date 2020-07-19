@@ -653,11 +653,13 @@ func (t Send) Apply(v Token) Token {
 
 func (t Send1) Eval(c Context) (Token, bool) {
 	x0 := TailEval(c, t.X0)
+	log.Printf("Sending: %s", x0)
 	rm := c.Send(mod(c, x0))
 	r, s := demod(rm)
 	if len(s) > 0 {
 		log.Panicf("Extra tail on demod %#v = %#v", rm, s)
 	}
+	log.Printf("Receivd: %s", r)
 	// log.Printf("%s => %s", t, r)
 	return r, false
 }
