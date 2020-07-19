@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"image"
 	"image/png"
@@ -22,6 +23,11 @@ func savePicture(fn string, pic image.Image) {
 	if err != nil {
 		log.Panic(err)
 	}
+}
+
+type Result struct {
+	Draw    []interpreter.Point `json:""`
+	Results []string            `json:""`
 }
 
 func main() {
@@ -49,10 +55,16 @@ func main() {
 	defer f.Close()
 
 	toks := interpreter.ParseReader(c, f)
+	r := Result{
+		Draw: c.Picture().Serial(),
+	}
 	for _, tok := range toks {
+		r.Results = append(r.Results, tok.Galaxy())
 		log.Printf("Result: %s", tok)
 	}
 	log.Printf("Evals: %d", c.EvalCount)
+
+	json.NewEncoder(os.Stdout).Encode(r)
 
 	if len(*drawOut) > 0 {
 		savePicture(*drawOut, c.Picture())

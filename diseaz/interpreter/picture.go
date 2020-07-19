@@ -1,8 +1,10 @@
 package interpreter
 
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"sort"
 	"strings"
 )
 
@@ -21,7 +23,7 @@ var (
 	}
 )
 
-type Picture map[image.Point]bool
+type Picture map[Point]bool
 
 func (pic Picture) Eval(c Context) (Token, bool) {
 	return pic, false
@@ -32,11 +34,33 @@ func (pic Picture) String() string {
 	for p := range pic {
 		pp = append(pp, p.String())
 	}
-	return "[" + strings.Join(pp, " ") + "]"
+	return "{" + strings.Join(pp, " ") + "}"
 }
 
-func (pic Picture) Draw(x, y int) image.Point {
-	r := image.Pt(x, y)
+func (pic Picture) Galaxy() string {
+	var pp []string
+	for p := range pic {
+		pp = append(pp, p.String())
+	}
+	return "{" + strings.Join(pp, " ") + "}"
+}
+
+func (pic Picture) Serial() []Point {
+	r := []Point{}
+	for p, v := range pic {
+		if !v {
+			continue
+		}
+		r = append(r, p)
+	}
+	sort.Slice(r, func(i, j int) bool {
+		return r[i].Lt(r[j])
+	})
+	return r
+}
+
+func (pic Picture) Draw(x, y int) Point {
+	r := Pt(x, y)
 	pic[r] = true
 	return r
 }
@@ -59,14 +83,8 @@ func (pic Picture) Bounds() image.Rectangle {
 	for p := range pic {
 		if b == nil {
 			b = &image.Rectangle{
-				Min: image.Point{
-					X: p.X,
-					Y: p.Y,
-				},
-				Max: image.Point{
-					X: p.X + 1,
-					Y: p.Y + 1,
-				},
+				Min: p.ToImg(),
+				Max: p.ToImg().Add(image.Pt(1, 1)),
 			}
 			continue
 		}
@@ -90,8 +108,32 @@ func (pic Picture) Bounds() image.Rectangle {
 }
 
 func (pic Picture) At(x, y int) color.Color {
-	if pic[image.Pt(x, y)] {
+	if pic[Pt(x, y)] {
 		return White
 	}
 	return Black
+}
+
+type Point struct {
+	X int `json:""`
+	Y int `json:""`
+}
+
+func Pt(x, y int) Point {
+	return Point{X: x, Y: y}
+}
+
+func (p Point) String() string {
+	return fmt.Sprintf("[%d, %d]", p.X, p.Y)
+}
+
+func (p Point) ToImg() image.Point {
+	return image.Pt(p.X, p.Y)
+}
+
+func (p Point) Lt(q Point) bool {
+	if p.X != q.X {
+		return p.X < q.X
+	}
+	return p.Y < q.Y
 }

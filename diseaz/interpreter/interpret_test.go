@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"image"
 	"strings"
 	"testing"
 
@@ -87,7 +86,8 @@ func TestParsePwr2(t *testing.T) {
 	tok := ParseLine(c, ":42 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b :42 ap add -1")
 	assert.Nil(t, tok)
 	tok = ParseLine(c, "ap :42 4")
-	assert.Equal(t, Int{V: 16}, tok)
+	require.Len(t, tok, 1)
+	assert.Equal(t, Int{V: 16}, tok[0])
 }
 
 func TestParsePwr2Reader(t *testing.T) {
@@ -95,7 +95,8 @@ func TestParsePwr2Reader(t *testing.T) {
 	text := `:42 = ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 ap ap b :42 ap add -1
 ap :42 4`
 	tok := ParseReader(c, strings.NewReader(text))
-	assert.Equal(t, Int{V: 16}, tok)
+	require.Len(t, tok, 1)
+	assert.Equal(t, Int{V: 16}, tok[0])
 }
 
 func TestI(t *testing.T) {
@@ -132,7 +133,7 @@ func TestIsNotNil(t *testing.T) {
 }
 
 func TestDraw(t *testing.T) {
-	testProgram(t, Picture{image.Point{X: 1, Y: 2}: true, image.Point{X: 41, Y: 42}: true},
+	testProgram(t, Picture{Point{X: 1, Y: 2}: true, Point{X: 41, Y: 42}: true},
 		Ap{}, Draw{},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 1}, Int{V: 2},
 		Ap{}, Ap{}, Cons{}, Ap{}, Ap{}, Vec{}, Int{V: 41}, Int{V: 42},
@@ -144,11 +145,12 @@ func TestDrawListCons(t *testing.T) {
 	c := NewContext(nil)
 	text := "ap draw (ap ap vec 1 2, ap ap vec 41 42)"
 	tok := ParseReader(c, strings.NewReader(text))
-	assert.Equal(t, Picture{image.Point{X: 1, Y: 2}: true, image.Point{X: 41, Y: 42}: true}, tok)
+	require.Len(t, tok, 1)
+	assert.Equal(t, Picture{Point{X: 1, Y: 2}: true, Point{X: 41, Y: 42}: true}, tok[0])
 }
 
 func TestMultipledraw(t *testing.T) {
-	testProgram(t, Picture{image.Point{X: 1, Y: 2}: true, image.Point{X: 41, Y: 42}: true, image.Point{X: 3, Y: 4}: true},
+	testProgram(t, Picture{Point{X: 1, Y: 2}: true, Point{X: 41, Y: 42}: true, Point{X: 3, Y: 4}: true},
 		Ap{}, Multipledraw{},
 		Ap{}, Ap{}, Cons{},
 		// (

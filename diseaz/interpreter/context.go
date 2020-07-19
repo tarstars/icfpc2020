@@ -14,12 +14,20 @@ type Context interface {
 	Send(message string) string
 
 	Picture() Picture
+	OutFormat() OutFormat
 
 	Level() int
 	Enter() int
 	Leave() int
 	CountEval() int
 }
+
+type OutFormat string
+
+const (
+	OutFormatS OutFormat = "s"
+	OutFormatG OutFormat = "g"
+)
 
 type Ctx struct {
 	Vars      map[int]Token
@@ -91,4 +99,8 @@ func (c *Ctx) CountEval() int {
 
 func (c *Ctx) Picture() Picture {
 	return c.Pic
+}
+
+func (c Ctx) OutFormat() OutFormat {
+	return OutFormatG
 }
