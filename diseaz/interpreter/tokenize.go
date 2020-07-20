@@ -114,6 +114,7 @@ func splitOn(toks []string, sep string) []string {
 			}
 		}
 	}
+	// log.Printf("splitOn(%#v) %#v => %#v", sep, toks, r)
 	return r
 }
 

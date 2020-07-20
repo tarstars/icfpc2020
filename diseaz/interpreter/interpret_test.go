@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"log"
 	"strings"
 	"testing"
 
@@ -211,4 +212,19 @@ func TestModDemod(t *testing.T) {
 		Ap{}, Modulate{},
 		Ap{}, Demodulate{}, Signal{S: "110110000101100010"},
 	)
+}
+
+func TestBraces(t *testing.T) {
+	c := NewContext(nil)
+	tok := ProcessTokens(c, []string{"()"})
+	assert.Equal(t,
+		Cons2{
+			X0: Nil{},
+			X1: Nil{},
+		},
+		tok,
+	)
+	log.Printf("tok: %s", tok.Galaxy())
+	tok = ProcessTokens(c, strings.Fields("(0, (1, 2), (3, 4))"))
+	log.Printf("tok: %s", tok.Galaxy())
 }

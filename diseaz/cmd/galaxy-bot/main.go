@@ -57,6 +57,13 @@ func checkListEnd(name string, endItem gx.Token) {
 	}
 }
 
+type GameResponse struct {
+	Error      bool
+	Stage      GameStage
+	StaticInfo *GameStaticInfo
+	State      *GameState
+}
+
 func ParseGameResponse(itemX0 ICons) (gr GameResponse) {
 	status := itemX0.Car().(Int).V
 	if status == 0 {
@@ -64,7 +71,7 @@ func ParseGameResponse(itemX0 ICons) (gr GameResponse) {
 	}
 
 	itemX1 := itemX0.Cdr().(ICons)
-	gr.Stage = GameStage(itemX0.Car().(Int).V)
+	gr.Stage = GameStage(itemX1.Car().(Int).V)
 	itemX2 := itemX1.Cdr().(ICons)
 	gr.StaticInfo = ParseGameStaticInfo(itemX2.Car().(ICons))
 	itemX3 := itemX2.Cdr().(ICons)
@@ -73,13 +80,6 @@ func ParseGameResponse(itemX0 ICons) (gr GameResponse) {
 	checkListEnd("GameResponse", itemX3.Cdr())
 
 	return gr
-}
-
-type GameResponse struct {
-	Error      bool
-	Stage      GameStage
-	StaticInfo *GameStaticInfo
-	State      *GameState
 }
 
 type GameState struct {
@@ -97,7 +97,7 @@ func ParseGameState(itemX0 ICons) (gs *GameState) {
 
 	gs.Tick = itemX0.Car().(Int).V
 	itemX1 := itemX0.Cdr().(ICons)
-	gs.X1 = itemX1.Car().Galaxy()
+	gs.X1 = itemX1.Car().String()
 	itemX2 := itemX1.Cdr().(ICons)
 	gs.Ships = ParseShipsAndCommands(itemX2.Car().(ICons))
 
@@ -139,7 +139,7 @@ func ParseShip(itemX0 ICons) (ship *ShipAndCommands) {
 
 func ParseCommands(itemX0 ICons) (cmds []string) {
 	for item := itemX0; !item.IsNil(); item = item.Cdr().(ICons) {
-		cmds = append(cmds, item.Car().Galaxy())
+		cmds = append(cmds, item.Car().String())
 	}
 	return cmds
 }
@@ -149,10 +149,7 @@ type ShipState struct {
 	ID       int64
 	Position gx.Point
 	Velocity gx.Point
-	X4       string
-	X5       string
-	X6       string
-	X7       string
+	Extra    []string
 }
 
 func ParseShipState(itemX0 ICons) (ss ShipState) {
@@ -165,15 +162,9 @@ func ParseShipState(itemX0 ICons) (ss ShipState) {
 	itemX3 := itemX2.Cdr().(ICons)
 	ss.Velocity = ParsePoint(itemX3.Car().(ICons))
 	itemX4 := itemX3.Cdr().(ICons)
-	ss.X4 = itemX4.Car().Galaxy()
-	itemX5 := itemX4.Cdr().(ICons)
-	ss.X5 = itemX5.Car().Galaxy()
-	itemX6 := itemX4.Cdr().(ICons)
-	ss.X6 = itemX6.Car().Galaxy()
-	itemX7 := itemX6.Cdr().(ICons)
-	ss.X7 = itemX7.Car().Galaxy()
-
-	checkListEnd("ParseShipState", itemX7.Cdr())
+	for item := itemX4; !item.IsNil(); item = item.Cdr().(ICons) {
+		ss.Extra = append(ss.Extra, item.Car().String())
+	}
 
 	return ss
 }
@@ -181,10 +172,7 @@ func ParseShipState(itemX0 ICons) (ss ShipState) {
 func ParsePoint(itemX0 ICons) (p gx.Point) {
 
 	p.X = int(itemX0.Car().(Int).V)
-	itemX1 := itemX0.Cdr().(ICons)
-	p.Y = int(itemX1.Car().(Int).V)
-
-	checkListEnd("ParsePoint", itemX1.Cdr())
+	p.Y = int(itemX0.Cdr().(Int).V)
 
 	return p
 }
@@ -207,15 +195,69 @@ func ParseGameStaticInfo(infoX0Item ICons) *GameStaticInfo {
 	infoX1Item := infoX0Item.Cdr().(ICons)
 	gi.Role = Role(infoX1Item.Car().(Int).V)
 	infoX2Item := infoX1Item.Cdr().(ICons)
-	gi.X2 = infoX2Item.Car().Galaxy()
+	gi.X2 = infoX2Item.Car().String()
 	infoX3Item := infoX2Item.Cdr().(ICons)
-	gi.X3 = infoX3Item.Car().Galaxy()
+	gi.X3 = infoX3Item.Car().String()
 	infoX4Item := infoX3Item.Cdr().(ICons)
-	gi.X4 = infoX4Item.Car().Galaxy()
+	gi.X4 = infoX4Item.Car().String()
 
 	checkListEnd("GameStaticInfo", infoX4Item.Cdr())
 
 	return &gi
+}
+
+type GameStaticInfoX2 struct {
+	X0 int64
+	X1 int64
+	X2 int64
+}
+
+func ParseGameStaticInfoX2(itemX0 ICons) (info GameStaticInfoX2) {
+	info.X0 = itemX0.Car().(Int).V
+	itemX1 := itemX0.Cdr().(ICons)
+	info.X1 = itemX1.Car().(Int).V
+	itemX2 := itemX1.Cdr().(ICons)
+	info.X2 = itemX2.Car().(Int).V
+
+	checkListEnd("ParseGameStaticInfoX2", itemX2.Cdr())
+
+	return info
+}
+
+type GameStaticInfoX3 struct {
+	X0 int64
+	X1 int64
+}
+
+func ParseGameStaticInfoX3(itemX0 ICons) (info GameStaticInfoX3) {
+	info.X0 = itemX0.Car().(Int).V
+	itemX1 := itemX0.Cdr().(ICons)
+	info.X1 = itemX1.Car().(Int).V
+
+	checkListEnd("ParseGameStaticInfoX3", itemX1.Cdr())
+
+	return info
+}
+
+type GameStaticInfoX4 struct {
+	X0 int64
+	X1 int64
+	X2 int64
+	X3 int64
+}
+
+func ParseGameStaticInfoX4(itemX0 ICons) (info GameStaticInfoX4) {
+	info.X0 = itemX0.Car().(Int).V
+	itemX1 := itemX0.Cdr().(ICons)
+	info.X1 = itemX1.Car().(Int).V
+	itemX2 := itemX1.Cdr().(ICons)
+	info.X2 = itemX2.Car().(Int).V
+	itemX3 := itemX2.Cdr().(ICons)
+	info.X3 = itemX3.Car().(Int).V
+
+	checkListEnd("ParseGameStaticInfoX4", itemX3.Cdr())
+
+	return info
 }
 
 type Role int
@@ -252,5 +294,23 @@ func main() {
 	if gs.Stage == GameFinished {
 		return
 	}
-	command(c, "START", fmt.Sprintf("ap send (3, %d, (1, 1, 1, 1))", playerKey))
+
+	gs = command(c, "START", fmt.Sprintf("ap send (3, %d, (1, 1, 1, 1))", playerKey))
+	if gs.Stage == GameFinished {
+		return
+	}
+
+	var shipId int64
+
+	for _, ship := range gs.State.Ships {
+		if ship.Ship.Role == gs.StaticInfo.Role {
+			shipId = ship.Ship.ID
+		}
+	}
+
+	log.Printf("Ship ID: %d", shipId)
+
+	for gs.Stage != GameFinished {
+		gs = command(c, "NOP", fmt.Sprintf("ap send ap ap cons 0 ap ap cons %d ap ap cons ap ap cons 0 0 nil", shipId))
+	}
 }
