@@ -14,12 +14,17 @@ from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow
 
 from computer import Machine
 
+def tutorial():
+    return "ap ap cons 2 ap ap cons ap ap cons 4 ap ap cons 5 nil ap ap cons 0 ap ap cons nil nil"
+
+def tick_tok():
+    return "ap ap cons 3 ap ap cons ap ap cons 0 ap ap cons ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 nil ap ap cons nil ap ap cons 0 nil ap ap cons 0 ap ap cons nil nil"
 
 def game_state():
     return "ap ap cons 6 ap ap cons ap ap cons 0 ap ap cons 12 ap ap cons 270608505102339400 ap ap cons 2 ap ap cons 0 ap ap cons 2 ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 47 ap ap cons ap ap cons 0 -1 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil ap ap cons 4 ap ap cons ap ap cons 1 ap ap cons ap ap cons 16 ap ap cons 128 nil ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons 15 -48 ap ap cons ap ap cons -1 0 ap ap cons ap ap cons 205 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons ap ap cons ap ap cons 0 ap ap cons ap ap cons 1 1 nil nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 47 ap ap cons ap ap cons 0 -1 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons nil ap ap cons ap ap cons ap ap cons 16 ap ap cons 128 nil ap ap cons ap ap cons ap ap cons 0 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons 16 -48 ap ap cons ap ap cons 0 0 ap ap cons ap ap cons 206 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 48 ap ap cons ap ap cons 0 0 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 1 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons 15 -48 ap ap cons ap ap cons -1 0 ap ap cons ap ap cons 205 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons ap ap cons ap ap cons 0 ap ap cons ap ap cons 1 1 nil nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 47 ap ap cons ap ap cons 0 -1 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 2 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons 13 -48 ap ap cons ap ap cons -2 0 ap ap cons ap ap cons 204 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons ap ap cons ap ap cons 0 ap ap cons ap ap cons 1 1 nil nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 45 ap ap cons ap ap cons 0 -2 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 3 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons 10 -47 ap ap cons ap ap cons -3 1 ap ap cons ap ap cons 203 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons ap ap cons ap ap cons 0 ap ap cons ap ap cons 1 0 nil nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 42 ap ap cons ap ap cons 0 -3 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 4 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons 6 -45 ap ap cons ap ap cons -4 2 ap ap cons ap ap cons 202 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons ap ap cons ap ap cons 0 ap ap cons ap ap cons 1 0 nil nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 38 ap ap cons ap ap cons 0 -4 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 5 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons 2 -42 ap ap cons ap ap cons -4 3 ap ap cons ap ap cons 202 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 33 ap ap cons ap ap cons 0 -5 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 6 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons -2 -38 ap ap cons ap ap cons -4 4 ap ap cons ap ap cons 202 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 27 ap ap cons ap ap cons 0 -6 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 7 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons -6 -33 ap ap cons ap ap cons -4 5 ap ap cons ap ap cons 202 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 20 ap ap cons ap ap cons 0 -7 ap ap cons ap ap cons 510 ap ap cons 0 ap ap cons 0 ap ap cons 1 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil ap ap cons ap ap cons 8 ap ap cons ap ap cons ap ap cons ap ap cons 1 ap ap cons 0 ap ap cons ap ap cons -10 -27 ap ap cons ap ap cons -4 6 ap ap cons ap ap cons 202 ap ap cons 30 ap ap cons 10 ap ap cons 1 nil ap ap cons 20 ap ap cons 64 ap ap cons 1 nil ap ap cons ap ap cons ap ap cons 2 ap ap cons ap ap cons -16 12 ap ap cons 30 ap ap cons 25 ap ap cons 4 nil nil nil ap ap cons ap ap cons ap ap cons 0 ap ap cons 1 ap ap cons ap ap cons -16 12 ap ap cons ap ap cons 0 -8 ap ap cons ap ap cons 0 ap ap cons 0 ap ap cons 0 ap ap cons 0 nil ap ap cons 0 ap ap cons 64 ap ap cons 1 nil ap ap cons nil nil nil nil nil nil ap ap cons nil nil ap ap cons 1 ap ap cons nil nil"
 
 def game_menu():
-    return "ap car ap ap ap interact :1338 ap ap cons 1 ap ap cons ap ap cons 11 nil ap ap cons 0 ap ap cons nil nil ap ap vec 0 4"
+    return "ap car ap ap ap interact :1338 ap ap cons 1 ap ap cons ap ap cons 5 nil ap ap cons 0 ap ap cons nil nil ap ap vec 0 4"
 
 def get_draw_data(galaxy_coords, state):
     icfpc_base = "/home/tass/go/src/github.com/tarstars/icfpc2020/"
@@ -58,8 +63,8 @@ class Worker(QRunnable):
     def run(self):
         state_stack = []
 
-        galaxy_coords = 0, 0  # ap ap cons nil ap ap cons nil ap ap cons nil ap ap cons nil ap ap cons nil ap ap cons 22288 nil ap ap cons 0 ap ap cons nil nil
-        state = game_menu() # "ap ap cons 1 ap ap cons ap ap cons 6 nil ap ap cons 0 ap ap cons nil nil"  # state = 'ap ap cons 0 ap ap cons ap ap cons 0 nil ap ap cons 0 ap ap cons nil nil'
+        galaxy_coords = (90, -66)  # ap ap cons nil ap ap cons nil ap ap cons nil ap ap cons nil ap ap cons nil ap ap cons 22288 nil ap ap cons 0 ap ap cons nil nil
+        state = tutorial() # "ap ap cons 1 ap ap cons ap ap cons 6 nil ap ap cons 0 ap ap cons nil nil"  # state = 'ap ap cons 0 ap ap cons ap ap cons 0 nil ap ap cons 0 ap ap cons nil nil'
         while True:
             draw_data, raw_output = get_draw_data(galaxy_coords, state=state)
             state = raw_output['Results'][0]
@@ -80,7 +85,7 @@ class Worker(QRunnable):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        side = 900
+        side = 1000
         self.setFixedWidth(side)
         self.setFixedHeight(side)
 
@@ -116,8 +121,8 @@ class MainWindow(QMainWindow):
             s_lt = cx - r, cy - r
             s_rb = cx + r, cy + r
 
-        d_lt = 50, 50
-        d_rb = 800, 800
+        d_lt = 10, 10
+        d_rb = 990, 990
 
         self.s_lt = s_lt
         self.s_rb = s_rb
@@ -159,7 +164,7 @@ class MainWindow(QMainWindow):
 
         painter.setPen(QColor(0, 0, 0, 0))
 
-        painter.setBrush(QColor(0, 0, 0, 255))
+        painter.setBrush(QColor(140, 140, 140, 255))
 
         d_lt = self.d_lt
         d_rb = self.d_rb
@@ -168,11 +173,11 @@ class MainWindow(QMainWindow):
             d_lt[0] - 10, d_lt[1] - 10, d_rb[0] - d_lt[0] + 20, d_rb[1] - d_lt[1] + 20
         )
 
-        painter.setBrush(QColor(240, 240, 240, 100))
+        painter.setBrush(QColor(140, 140, 140, 255))
         painter.drawRect(d_lt[0], d_lt[1], d_rb[0] - d_lt[0], d_rb[1] - d_lt[1])
 
-        pallet = [QColor(255, 0, 0, 150), QColor(0, 255, 0, 150), QColor(0, 0, 255, 150),
-                  QColor(255, 0, 255, 150), QColor(0, 255, 255, 150), QColor(0, 0, 255, 150)]
+        pallet = [QColor(255, 0, 0, 100), QColor(0, 255, 0, 100), QColor(0, 0, 255, 100),
+                  QColor(255, 0, 255, 100), QColor(0, 255, 255, 100), QColor(255, 255, 0, 100)]
 
         # figure
         for point in self.all_points:

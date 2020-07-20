@@ -8,6 +8,7 @@ import (
 	"os"
 	//"strconv"
 	"strings"
+
 )
 
 func communicate(serverURL, message string) string {
