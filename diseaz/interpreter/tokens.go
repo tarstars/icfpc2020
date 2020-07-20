@@ -52,7 +52,7 @@ func (t Ap2) Apply(v Token) Token {
 }
 
 func (t Ap2) Eval(c Context) (Token, bool) {
-	f := TailEval(c, t.F).(Func)
+	f := c.Eval(t.F).(Func)
 	r := f.Apply(t.A)
 	// log.Printf("%s => %s", t, r)
 	return r, true
@@ -112,7 +112,7 @@ func (t Inc) Apply(v Token) Token {
 }
 
 func (t Inc1) Eval(c Context) (Token, bool) {
-	v := TailEval(c, t.X0).(Int)
+	v := c.Eval(t.X0).(Int)
 	r := Int{V: v.V + 1}
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -148,7 +148,7 @@ func (t Dec) Apply(v Token) Token {
 }
 
 func (t Dec1) Eval(c Context) (Token, bool) {
-	v := TailEval(c, t.X0).(Int)
+	v := c.Eval(t.X0).(Int)
 	r := Int{V: v.V - 1}
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -192,8 +192,8 @@ func (t Add1) Apply(v Token) Token {
 }
 
 func (t Add2) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int)
-	x1 := TailEval(c, t.X1).(Int)
+	x0 := c.Eval(t.X0).(Int)
+	x1 := c.Eval(t.X1).(Int)
 	r := Int{V: x0.V + x1.V}
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -249,8 +249,8 @@ func (t Mul1) Apply(v Token) Token {
 }
 
 func (t Mul2) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int)
-	x1 := TailEval(c, t.X1).(Int)
+	x0 := c.Eval(t.X0).(Int)
+	x1 := c.Eval(t.X1).(Int)
 	r := Int{V: x0.V * x1.V}
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -306,8 +306,8 @@ func (t Div1) Apply(v Token) Token {
 }
 
 func (t Div2) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int)
-	x1 := TailEval(c, t.X1).(Int)
+	x0 := c.Eval(t.X0).(Int)
+	x1 := c.Eval(t.X1).(Int)
 	r := Int{V: x0.V / x1.V}
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -363,8 +363,8 @@ func (t Eq1) Apply(v Token) Token {
 }
 
 func (t Eq2) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int)
-	x1 := TailEval(c, t.X1).(Int)
+	x0 := c.Eval(t.X0).(Int)
+	x1 := c.Eval(t.X1).(Int)
 	var r Token = False{}
 	if x0.V == x1.V {
 		r = True{}
@@ -423,8 +423,8 @@ func (t Lt1) Apply(v Token) Token {
 }
 
 func (t Lt2) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int)
-	x1 := TailEval(c, t.X1).(Int)
+	x0 := c.Eval(t.X0).(Int)
+	x1 := c.Eval(t.X1).(Int)
 	var r Token = False{}
 	if x0.V < x1.V {
 		r = True{}
@@ -465,12 +465,12 @@ func (t Lt2) Galaxy() string {
 	return fmt.Sprintf("ap ap lt %s %s", t.X0.Galaxy(), t.X1.Galaxy())
 }
 
-func mod(c Context, v Token) string {
+func ModulateToken(v Token) string {
 	switch tt := v.(type) { // TailEval?
 	case Int:
 		return modInt(tt.V)
 	case ICons:
-		return modCons(c, tt)
+		return modCons(tt)
 	default:
 		log.Panicf("Invalid `modulate` argument: %s", v)
 	}
@@ -498,14 +498,22 @@ func modInt(v int64) string {
 	return strings.Join(rs, "")
 }
 
-func modCons(c Context, v ICons) string {
+func modCons(v ICons) string {
 	if v.IsNil() {
 		return "00"
 	}
-	return "11" + mod(c, v.Car()) + mod(c, v.Cdr())
+	return "11" + ModulateToken(v.Car()) + ModulateToken(v.Cdr())
 }
 
-func demod(v string) (Token, string) {
+func DemodulateToken(v string) Token {
+	r, s := demodToken(v)
+	if len(s) > 0 {
+		log.Panicf("Extra tail on demod %s\n=> %s\n++ %s", v, r, s)
+	}
+	return r
+}
+
+func demodToken(v string) (Token, string) {
 	if len(v) == 0 {
 		return nil, v
 	}
@@ -514,8 +522,8 @@ func demod(v string) (Token, string) {
 		return Nil{}, w
 	}
 	if prefix == "11" {
-		car, w := demod(w)
-		cdr, w := demod(w)
+		car, w := demodToken(w)
+		cdr, w := demodToken(w)
 		return Cons2{X0: car, X1: cdr}, w
 	}
 	return demodInt(v)
@@ -577,8 +585,8 @@ func (t Modulate) Apply(v Token) Token {
 }
 
 func (t Modulate1) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0)
-	r := Signal{S: mod(c, x0)}
+	x0 := c.Eval(t.X0)
+	r := Signal{S: ModulateToken(x0)}
 	// log.Printf("%s => %s", t, r)
 	return r, false
 }
@@ -613,11 +621,8 @@ func (t Demodulate) Apply(v Token) Token {
 }
 
 func (t Demodulate1) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Signal).S
-	r, s := demod(x0)
-	if len(s) > 0 {
-		log.Panicf("Invalid signal: %s", x0)
-	}
+	x0 := c.Eval(t.X0).(Signal).S
+	r := DemodulateToken(x0)
 	// log.Printf("%s => %s", t, r)
 	return r, false
 }
@@ -652,13 +657,9 @@ func (t Send) Apply(v Token) Token {
 }
 
 func (t Send1) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0)
+	x0 := c.Eval(t.X0)
 	log.Printf("Sending: %s", x0)
-	rm := c.Send(mod(c, x0))
-	r, s := demod(rm)
-	if len(s) > 0 {
-		log.Panicf("Extra tail on demod %#v = %#v", rm, s)
-	}
+	r := DemodulateToken(c.Send(ModulateToken(x0)))
 	log.Printf("Receivd: %s", r.Galaxy())
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -698,7 +699,7 @@ func (t Neg) Eval(c Context) (Token, bool) {
 }
 
 func (t Neg1) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int)
+	x0 := c.Eval(t.X0).(Int)
 	r := Int{V: -x0.V}
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -747,9 +748,9 @@ func (t S2) Apply(v Token) Token {
 }
 
 func (t S3) Eval(c Context) (Token, bool) {
-	f0 := TailEval(c, t.X0).(Func)
-	x2 := TailEval(c, t.X2)
-	f1 := TailEval(c, f0.Apply(x2)).(Func)
+	f0 := c.Eval(t.X0).(Func)
+	x2 := c.Eval(t.X2)
+	f1 := c.Eval(f0.Apply(x2)).(Func)
 	r := f1.Apply(
 		Ap2{
 			F: t.X1,
@@ -831,8 +832,8 @@ func (t C2) Apply(v Token) Token {
 }
 
 func (t C3) Eval(c Context) (Token, bool) {
-	f0 := TailEval(c, t.X0).(Func)
-	f1 := TailEval(c, f0.Apply(t.X2)).(Func)
+	f0 := c.Eval(t.X0).(Func)
+	f1 := c.Eval(f0.Apply(t.X2)).(Func)
 	r := f1.Apply(t.X1)
 	// log.Printf("%s => %s", t, r)
 	return r, true
@@ -909,7 +910,7 @@ func (t B2) Apply(v Token) Token {
 }
 
 func (t B3) Eval(c Context) (Token, bool) {
-	r := TailEval(c, t.X0).(Func).Apply(
+	r := c.Eval(t.X0).(Func).Apply(
 		Ap2{
 			F: t.X1,
 			A: t.X2,
@@ -972,7 +973,7 @@ func (t Pwr2) Apply(v Token) Token {
 }
 
 func (t Pwr21) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int).V
+	x0 := c.Eval(t.X0).(Int).V
 	r := Int{V: 1 << x0}
 	// log.Printf("%s => %s", t, r)
 	return r, false
@@ -1166,8 +1167,8 @@ func (t Cons2) Apply(v Token) Token {
 }
 
 func (t Cons3) Eval(c Context) (Token, bool) {
-	y1 := TailEval(c, t.X2).(Func)
-	y2 := TailEval(c, y1.Apply(t.X0)).(Func)
+	y1 := c.Eval(t.X2).(Func)
+	y2 := c.Eval(y1.Apply(t.X0)).(Func)
 	r := y2.Apply(t.X1)
 	// log.Printf("%s => %s", t, r)
 	return r, true
@@ -1182,8 +1183,8 @@ func (t Cons1) Eval(c Context) (Token, bool) {
 }
 
 func (t Cons2) Eval(c Context) (Token, bool) {
-	t.X0 = TailEval(c, t.X0)
-	t.X1 = TailEval(c, t.X1)
+	t.X0 = c.Eval(t.X0)
+	t.X1 = c.Eval(t.X1)
 	return t, false
 }
 
@@ -1253,7 +1254,7 @@ func (t Car) Apply(v Token) Token {
 }
 
 func (t Car1) Eval(c Context) (Token, bool) {
-	y1 := TailEval(c, t.X0).(Func)
+	y1 := c.Eval(t.X0).(Func)
 	r := y1.Apply(True{})
 	// log.Printf("%s => %s", t, r)
 	return r, true
@@ -1289,7 +1290,7 @@ func (t Cdr) Apply(v Token) Token {
 }
 
 func (t Cdr1) Eval(c Context) (Token, bool) {
-	y1 := TailEval(c, t.X0).(Func)
+	y1 := c.Eval(t.X0).(Func)
 	r := y1.Apply(False{})
 	// log.Printf("%s => %s", t, r)
 	return r, true
@@ -1416,7 +1417,7 @@ func (t IsNil) Apply(v Token) Token {
 }
 
 func (t IsNil1) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Func)
+	x0 := c.Eval(t.X0).(Func)
 	r := x0.Apply(isNil{})
 	// log.Printf("%s => %s", t, r)
 	return r, true
@@ -1452,7 +1453,7 @@ type ICons interface {
 func DrawPoints(c Context, v Token) *Picture {
 	var pts []Point
 	r := NewPicture()
-	for i := TailEval(c, v).(ICons); !i.IsNil(); i = i.Cdr().(ICons) {
+	for i := c.Eval(v).(ICons); !i.IsNil(); i = i.Cdr().(ICons) {
 		p := i.Car().(ICons)
 		x := int(p.Car().(Int).V)
 		y := int(p.Cdr().(Int).V)
@@ -1527,8 +1528,8 @@ func (t Multipledraw) Apply(v Token) Token {
 
 func (t Multipledraw1) Eval(c Context) (Token, bool) {
 	r := NewPicture()
-	v := TailEval(c, t.X0).(ICons)
-	for i := v; !i.IsNil(); i = TailEval(c, i.Cdr()).(ICons) {
+	v := c.Eval(t.X0).(ICons)
+	for i := v; !i.IsNil(); i = c.Eval(i.Cdr()).(ICons) {
 		r.DrawPicture(DrawPoints(c, i.Car()))
 	}
 	return r, false
@@ -1581,7 +1582,7 @@ func (t If02) Apply(v Token) Token {
 }
 
 func (t If03) Eval(c Context) (Token, bool) {
-	x0 := TailEval(c, t.X0).(Int).V
+	x0 := c.Eval(t.X0).(Int).V
 	r := t.X2
 	if x0 == 0 {
 		r = t.X1
@@ -1663,11 +1664,11 @@ func (t interactHelper2) Eval(c Context) (Token, bool) {
 	//                 then (modem(newState), multipledraw(data))
 	//                 else interact(protocol, modem(newState), send(data))
 
-	x1 := TailEval(c, t.X1).(ICons)
-	flag := TailEval(c, x1.Car()).(Int)
-	x11 := TailEval(c, x1.Cdr()).(ICons)
+	x1 := c.Eval(t.X1).(ICons)
+	flag := c.Eval(x1.Car()).(Int)
+	x11 := c.Eval(x1.Cdr()).(ICons)
 	newState := x11.Car()
-	x12 := TailEval(c, x11.Cdr()).(ICons)
+	x12 := c.Eval(x11.Cdr()).(ICons)
 	data := x12.Car()
 	if flag.V == 0 {
 		r := Cons2{

@@ -30,12 +30,12 @@ func Interpret(c Context, p Program) (Token, error) {
 	return pout[0], nil
 }
 
-func TailEval(c Context, t Token) Token {
-	r, _ := TailEvalDo(c, t)
+func (c *Ctx) Eval(t Token) Token {
+	r, _ := c.EvalDo(t)
 	return r
 }
 
-func TailEvalDo(c Context, t Token) (Token, bool) {
+func (c *Ctx) EvalDo(t Token) (Token, bool) {
 	c.CountEval()
 	// lvl := c.Enter()
 	// defer c.Leave()

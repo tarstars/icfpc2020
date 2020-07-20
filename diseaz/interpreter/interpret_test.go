@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"log"
 	"strings"
 	"testing"
 
@@ -14,7 +15,7 @@ func runProgram(t *testing.T, ts ...Token) Token {
 	tok, err := Interpret(c, p)
 	require.NoError(t, err, "Interpret failed")
 	// log.Printf("Program: %s", tok)
-	r := TailEval(c, tok)
+	r := c.Eval(tok)
 	return r
 }
 
@@ -182,25 +183,20 @@ func TestModulateInt(t *testing.T) {
 }
 
 func TestModulate(t *testing.T) {
-	c := NewContext(nil)
-	assert.Equal(t, "00", mod(c, Nil{}))
-	assert.Equal(t, "110000", mod(c, Cons2{X0: Nil{}, X1: Nil{}}))
-	assert.Equal(t, "110110000101100010", mod(c, Cons2{X0: Int{V: 1}, X1: Int{V: 2}}))
+	assert.Equal(t, "00", ModulateToken(Nil{}))
+	assert.Equal(t, "110000", ModulateToken(Cons2{X0: Nil{}, X1: Nil{}}))
+	assert.Equal(t, "110110000101100010", ModulateToken(Cons2{X0: Int{V: 1}, X1: Int{V: 2}}))
 }
 
 func TestDemodulate(t *testing.T) {
-	c := NewContext(nil)
-	v, s := demod("00")
-	assert.Equal(t, "00", mod(c, v))
-	assert.Len(t, s, 0)
+	v := DemodulateToken("00")
+	assert.Equal(t, "00", ModulateToken(v))
 
-	v, s = demod("110000")
-	assert.Equal(t, "110000", mod(c, v))
-	assert.Len(t, s, 0)
+	v = DemodulateToken("110000")
+	assert.Equal(t, "110000", ModulateToken(v))
 
-	v, s = demod("110110000101100010")
-	assert.Equal(t, "110110000101100010", mod(c, v))
-	assert.Len(t, s, 0)
+	v = DemodulateToken("110110000101100010")
+	assert.Equal(t, "110110000101100010", ModulateToken(v))
 }
 
 func TestModDemod(t *testing.T) {
@@ -216,4 +212,19 @@ func TestModDemod(t *testing.T) {
 		Ap{}, Modulate{},
 		Ap{}, Demodulate{}, Signal{S: "110110000101100010"},
 	)
+}
+
+func TestBraces(t *testing.T) {
+	c := NewContext(nil)
+	tok := ProcessTokens(c, []string{"()"})
+	assert.Equal(t,
+		Cons2{
+			X0: Nil{},
+			X1: Nil{},
+		},
+		tok,
+	)
+	log.Printf("tok: %s", tok.Galaxy())
+	tok = ProcessTokens(c, strings.Fields("(0, (1, 2), (3, 4))"))
+	log.Printf("tok: %s", tok.Galaxy())
 }
