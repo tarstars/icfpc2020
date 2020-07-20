@@ -1,3 +1,3 @@
 #!/bin/sh
 
-app/app "$@" || echo "run error code: $?"
+./diseaz/cmd/galaxy-bot/app "$@" || echo "run error code: $?"

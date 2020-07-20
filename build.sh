@@ -1,4 +1,4 @@
 #!/bin/sh
 
-cd app
+cd ./diseaz/cmd/galaxy-bot
 go build -o app .

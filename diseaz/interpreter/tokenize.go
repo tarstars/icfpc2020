@@ -122,6 +122,7 @@ func ParseLine(c Context, s string) []Token {
 	if len(toks) == 0 || IsComment(toks[0]) {
 		return nil
 	}
+	log.Printf("Run: %s", s)
 
 	assign := false
 	var varN VarN
@@ -135,12 +136,14 @@ func ParseLine(c Context, s string) []Token {
 	tok := ProcessTokens(c, toks)
 
 	if assign {
+		// log.Printf("%s = %s", varN, tok.Galaxy())
 		c.SetVar(varN.N, tok)
 		return nil
 	}
 
+	// log.Printf("%s", tok.Galaxy())
 	r := c.Eval(tok)
-	// log.Printf("%s => %s", tok, r)
+	// log.Printf("=> %s", tok, r)
 	return []Token{r}
 }
 
@@ -151,6 +154,10 @@ func ParseReader(c Context, rd io.Reader) []Token {
 		rs = append(rs, ParseLine(c, line)...)
 	}
 	return rs
+}
+
+func ParseString(c Context, s string) []Token {
+	return ParseReader(c, strings.NewReader(s))
 }
 
 var tokenMap = makeTokenMap(
