@@ -11,15 +11,19 @@ import (
 type Context interface {
 	GetVar(n int) Token
 	SetVar(n int, v Token)
+
+	Eval(t Token) Token
+
 	Send(message string) string
+	SendToken(v Token) Token
 
 	Picture() *Picture
-	OutFormat() OutFormat
+	// OutFormat() OutFormat
 
-	Level() int
-	Enter() int
-	Leave() int
-	CountEval() int
+	// Level() int
+	// Enter() int
+	// Leave() int
+	// CountEval() int
 }
 
 type OutFormat string
@@ -55,6 +59,10 @@ func (c Ctx) GetVar(n int) Token {
 
 func (c *Ctx) SetVar(n int, p Token) {
 	c.Vars[n] = p
+}
+
+func (c *Ctx) SendToken(v Token) Token {
+	return DemodulateToken(c.Send(ModulateToken(v)))
 }
 
 func (c *Ctx) Send(message string) string {

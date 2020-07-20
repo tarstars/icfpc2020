@@ -139,7 +139,7 @@ func ParseLine(c Context, s string) []Token {
 		return nil
 	}
 
-	r := TailEval(c, tok)
+	r := c.Eval(tok)
 	// log.Printf("%s => %s", tok, r)
 	return []Token{r}
 }
